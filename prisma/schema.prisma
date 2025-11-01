@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ============================
+// ========= USUARIO =========
+// ============================
+//
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+
+  accounts Account[]
+  sessions Session[]
+
+  // === Panel EMPRESA (existente)
+  clients Client[] @relation("UserClients")
+  loans   Loan[]   @relation("UserLoans")
+
+  // === Panel CLIENTE (nuevo)
+  clientProfile      ClientProfile?
+  clientLoans        ClientLoan[]        @relation("UserClientLoans")
+  clientInstallments ClientInstallment[] @relation("UserClientInstallments")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+//
+// ============================
+/**
+ * ====== PANEL EMPRESA ======
+ */
+// ============================
+//
+
+model Client {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation("UserClients", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  phone       String?
+
+  loans Loan[] @relation("ClientLoans")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([name])
+}
+
+model Loan {
+  id String @id @default(cuid())
+
+  ownerId String
+  owner   User   @relation("UserLoans", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation("ClientLoans", fields: [clientId], references: [id], onDelete: Cascade)
+
+  amount        Decimal @db.Decimal(12, 2)
+  months        Int
+  markupPercent Int
+  totalToRepay  Decimal @db.Decimal(12, 2)
+
+  startDate DateTime
+  payments  Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([clientId])
+  @@index([startDate])
+}
+
+model Payment {
+  id     String @id @default(cuid())
+  loanId String
+  loan   Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  dueDate DateTime
+  amount  Decimal       @db.Decimal(12, 2)
+  status  PaymentStatus @default(PENDING)
+  paidAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // @@unique([loanId, dueDate]) // opcional
+
+  @@index([loanId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  LATE
+}
+
+//
+// ============================
+// ====== PANEL CLIENTE =======
+// ============================
+//
+
+model ClientProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  loans        ClientLoan[]
+  installments ClientInstallment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClientLoan {
+  id String @id @default(cuid())
+
+  // Relación con el usuario (para filtrar por usuario)
+  userId String
+  user   User   @relation("UserClientLoans", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relación con el perfil de cliente
+  profileId String
+  profile   ClientProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  title          String
+  type           ClientLoanType @default(OTHER)
+  startDate      DateTime
+  months         Int
+  monthlyPayment Decimal        @db.Decimal(12, 2)
+  monthlyExtras  Decimal?       @db.Decimal(12, 2)
+  finishedAt     DateTime?
+
+  installments ClientInstallment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([startDate])
+}
+
+model ClientInstallment {
+  id String @id @default(cuid())
+
+  loanId String
+  loan   ClientLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("UserClientInstallments", fields: [userId], references: [id], onDelete: Cascade)
+
+  profileId String
+  profile   ClientProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  title   String?
+  dueDate DateTime
+  amount  Decimal                 @db.Decimal(12, 2)
+  status  ClientInstallmentStatus @default(PENDING)
+  paidAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+enum ClientLoanType {
+  MORTGAGE
+  CAR
+  PERSONAL
+  STUDENT
+  OTHER
+}
+
+enum ClientInstallmentStatus {
+  PENDING
+  PAID
+}

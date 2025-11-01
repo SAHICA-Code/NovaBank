@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* 🎨 Paleta fija de colores (modo claro bloqueado) */
+:root {
+  color-scheme: light; /* Fuerza tema claro en Chrome y formularios */
+  --background: #ffffff;
+  --foreground: #1a1a1a; /* Texto oscuro, buen contraste */
+  --foreground-muted: #444; /* Textos secundarios (como los grises suaves) */
+}
+
+/* 💅 Tipografía y colores base */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* 🧹 Elimina el modo oscuro automático completamente */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #1a1a1a;
+  }
+}
+
+/* 🧠 Base global: fondo y texto */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 🔍 Asegura contraste correcto en inputs y placeholders */
+input,
+select,
+textarea {
+  background-color: #fff !important;
+  color: var(--foreground) !important;
+  border: 1px solid #ccc;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #777 !important;
+}
+
+/* 🔒 Evita que el navegador altere colores en modo oscuro */
+html {
+  background-color: var(--background);
+}
