@@ -84,11 +84,11 @@ function startOfMonth(d = new Date()) {
     const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
     const td = "px-4 py-3 align-middle whitespace-nowrap";
 
-    // Nuevas clases con separación horizontal
-    const thRightGap = "text-right pr-10 px-4 py-3 font-medium whitespace-nowrap";
-    const thLeftGap = "text-left pl-10 px-4 py-3 font-medium whitespace-nowrap";
-    const tdRightGap = "px-4 py-3 text-right pr-10 align-middle whitespace-nowrap";
-    const tdLeftGap = "px-4 py-3 text-left pl-10 align-middle whitespace-nowrap";
+    // Más separación entre columnas
+    const thRightGap = "text-right pr-20 px-4 py-3 font-medium whitespace-nowrap"; // antes pr-10
+    const thLeftGap = "text-left pl-20 px-4 py-3 font-medium whitespace-nowrap"; // antes pl-10
+    const tdRightGap = "px-4 py-3 text-right pr-20 align-middle whitespace-nowrap"; // antes pr-10
+    const tdLeftGap = "px-4 py-3 text-left pl-20 align-middle whitespace-nowrap"; // antes pl-10
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
