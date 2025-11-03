@@ -1,3 +1,4 @@
+// src/app/api/import/xlsx/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -5,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import ExcelJS from "exceljs";
 
 // Helpers --------------------------
-function normalizeHeader(s: any) {
+function normalizeHeader(s: unknown) {
     if (!s) return "";
     return String(s)
         .toLowerCase()
@@ -15,7 +16,7 @@ function normalizeHeader(s: any) {
         .trim();
     }
 
-    function parseNumber(v: any): number {
+    function parseNumber(v: unknown): number {
     if (typeof v === "number") return v;
     if (v == null) return NaN;
     const s = String(v).replace(/\s/g, "").replace("€", "").replace(",", ".");
@@ -30,7 +31,7 @@ function normalizeHeader(s: any) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     }
 
-    function parseDate(v: any): Date | null {
+    function parseDate(v: unknown): Date | null {
     if (!v) return null;
     if (v instanceof Date && !isNaN(v.getTime())) return v;
     const s = String(v).trim();
@@ -52,14 +53,23 @@ function normalizeHeader(s: any) {
     return isNaN(d.getTime()) ? null : d;
     }
 
-    function normalizeStatus(v: any): "PENDING" | "PAID" {
+    function normalizeStatus(v: unknown): "PENDING" | "PAID" {
     const s = String(v || "").toLowerCase();
     if (s.includes("paid") || s.includes("pagad")) return "PAID";
     return "PENDING";
     }
 
-    // Expected headers in the detail table
-    const REQUIRED = [
+    // ExcelJS puede devolver valores complejos (rich text, hyperlinks, etc.)
+    // Esta utilidad convierte lo que sea a string de forma segura.
+    function valToString(v: unknown) {
+    if (v == null) return "";
+    return typeof v === "object" && v && "text" in (v as Record<string, unknown>)
+        ? String((v as Record<string, unknown>).text)
+        : String(v);
+    }
+
+    // (solo para documentación; sin uso directo → evita warning con prefijo _)
+    const _REQUIRED = [
     "cliente",
     "inversion (€)",
     "recargo (%)",
@@ -88,7 +98,8 @@ function normalizeHeader(s: any) {
         return NextResponse.json({ error: "Falta el archivo 'file' (.xlsx)" }, { status: 400 });
         }
 
-        const buf = Buffer.from(await file.arrayBuffer());
+        // Buffer correcto para Node (evita error de tipos)
+        const buf = Buffer.from(new Uint8Array(await file.arrayBuffer()));
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(buf);
         const ws = wb.worksheets[0];
@@ -102,8 +113,9 @@ function normalizeHeader(s: any) {
 
         for (let r = 1; r <= Math.min(ws.rowCount, 50); r++) {
         const row = ws.getRow(r);
-        const labels = row.values
-            .map((x: any) => normalizeHeader(x?.text ?? x))
+        const values = Array.isArray(row.values) ? row.values : [];
+        const labels = values
+            .map((x) => normalizeHeader(valToString(x as unknown)))
             .filter(Boolean);
 
         // ¿Contiene al menos "cliente" e "inversion"?
@@ -111,7 +123,7 @@ function normalizeHeader(s: any) {
             // construimos un mapa header -> columna
             const map: Record<string, number> = {};
             row.eachCell((cell, col) => {
-            const key = normalizeHeader(cell.value?.['text'] ?? cell.value);
+            const key = normalizeHeader(valToString(cell.value));
             if (key) map[key] = col;
             });
 
@@ -212,8 +224,8 @@ function normalizeHeader(s: any) {
         groups: groups.size,
         };
 
-        await prisma.$transaction(async (tx) => {
-        for (const [key, rows] of groups) {
+        await prisma.$transaction(async (tx: typeof prisma) => {
+        for (const [_key, rows] of groups) { // _key para evitar warning de variable no usada
             const sample = rows[0]!;
             const clientName = sample.clientName.trim();
             const amount = sample.amount;
@@ -286,7 +298,7 @@ function normalizeHeader(s: any) {
                 loanId: loan!.id,
                 dueDate: r.due,
                 amount: r.paymentAmount,
-                status: r.status,
+                status: r.status, // "PENDING" | "PAID"
                 paidAt: r.status === "PAID" ? new Date() : null,
                 })),
             });
@@ -296,8 +308,11 @@ function normalizeHeader(s: any) {
         });
 
         return NextResponse.json({ ok: true, report });
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
-        return NextResponse.json({ error: "Error al importar", detail: String(e?.message ?? e) }, { status: 500 });
+        return NextResponse.json(
+        { error: "Error al importar", detail: String((e as Error)?.message ?? e) },
+        { status: 500 }
+        );
     }
 }

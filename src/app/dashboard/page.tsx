@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -31,7 +32,7 @@ function startOfYear(d = new Date()) {
     }
 
     const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
-    const toNum = (v: any) => Number(v ?? 0);
+    const toNum = (v: unknown) => Number(v ?? 0);
 
     const [
         clientsCount,
@@ -68,13 +69,18 @@ function startOfYear(d = new Date()) {
     const totalToCollect = toNum(financeAgg._sum.totalToRepay);
     const profitProjected = totalToCollect - invested;
 
-    const pendingTotal = sum(pendingPayments.map(p => toNum(p.amount)));
-    const collectedTotal = sum(paidPayments.map(p => toNum(p.amount)));
+    // Tipado explícito en los map para evitar "implicit any"
+    const pendingTotal = sum(
+        pendingPayments.map((p: { amount: unknown }) => Number(p.amount ?? 0))
+    );
+    const collectedTotal = sum(
+        paidPayments.map((p: { amount: unknown }) => Number(p.amount ?? 0))
+    );
 
     const recoveredCapital = Math.min(collectedTotal, invested);
     const realizedProfit = Math.max(collectedTotal - invested, 0);
     const capitalToRecover = Math.max(invested - recoveredCapital, 0);
-    const profitRemaining = Math.max(profitProjected - realizedProfit, 0);
+    const profitRemaining = Math.max(profitProjected - realizedProfit, 0); // puede que no lo uses en UI ahora
     const breakEven = capitalToRecover === 0;
 
     return (
@@ -118,7 +124,7 @@ function startOfYear(d = new Date()) {
                 Clientes
                 </a>
 
-                {/* NUEVO: cambiar a panel de cliente */}
+                {/* Cambiar a panel de cliente */}
                 <a
                 href="/cliente"
                 className="rounded-xl border-2 border-sky-300 bg-white/80 px-4 py-2 md:py-2.5 font-medium shadow-sm hover:bg-sky-50 transition text-center w-full"
