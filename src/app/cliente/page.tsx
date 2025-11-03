@@ -169,21 +169,32 @@ function startOfMonth(d = new Date()) {
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
 
-            {/* CUOTAS DEL MES (orden nuevo: Préstamo → Importe → Fecha → Estado) */}
+            {/* CUOTAS DEL MES (Préstamo → Importe → Fecha → Estado) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
 
-            <div
-                className={tableWrap}
-                style={{ WebkitOverflowScrolling: "touch" as any }}
-            >
+            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
                 <table className={tableBase}>
+                {/* Anchos para separar bien Importe ↔ Fecha y alinear Estado a la derecha */}
+                <colgroup>
+                    <col style={{ width: "42%" }} />  {/* Préstamo */}
+                    <col style={{ width: "18%" }} />  {/* Importe */}
+                    <col style={{ width: "22%" }} />  {/* Fecha */}
+                    <col style={{ width: "18%" }} />  {/* Estado (derecha) */}
+                </colgroup>
+
                 <thead className={thead}>
                     <tr>
-                    <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">Préstamo</th>
-                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">Importe</th>
+                    <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">
+                        Préstamo
+                    </th>
+                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">
+                        Importe
+                    </th>
                     <th className={th}>Fecha</th>
-                    <th className={th}>Estado</th>
+                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                        Estado
+                    </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -196,7 +207,9 @@ function startOfMonth(d = new Date()) {
                     ) : (
                     installmentsThisMonth.map((i: any) => (
                         <tr key={i.id} className={tr}>
-                        <td className="px-2.5 py-3 align-middle whitespace-nowrap">{i.title ?? "—"}</td>
+                        <td className="px-2.5 py-3 align-middle whitespace-nowrap">
+                            {i.title ?? "—"}
+                        </td>
                         <td className="px-2.5 py-3 align-middle whitespace-nowrap text-right">
                             {Number(i.amount ?? 0).toLocaleString("es-ES", {
                             style: "currency",
@@ -206,16 +219,18 @@ function startOfMonth(d = new Date()) {
                         <td className={td}>
                             {new Date(i.dueDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={td}>
+                        <td className="px-4 py-3">
+                            <div className="flex justify-end">
                             {i.status === "PAID" ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
                                 Pagada
-                            </span>
+                                </span>
                             ) : (
-                            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-200">
+                                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-200">
                                 Pendiente
-                            </span>
+                                </span>
                             )}
+                            </div>
                         </td>
                         </tr>
                     ))
@@ -225,7 +240,7 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* TUS PRÉSTAMOS (orden nuevo: Título → Cuota → Inicio → Extras → Acciones) */}
+            {/* TUS PRÉSTAMOS (Título → Cuota → Inicio → Extras → Acciones) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Tus préstamos</h3>
@@ -237,18 +252,30 @@ function startOfMonth(d = new Date()) {
                 </Link>
             </div>
 
-            <div
-                className={tableWrap}
-                style={{ WebkitOverflowScrolling: "touch" as any }}
-            >
+            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
                 <table className={tableBase}>
+                {/* Anchos para separar bien Cuota ↔ Inicio; Acciones a la derecha */}
+                <colgroup>
+                    <col style={{ width: "40%" }} />  {/* Título */}
+                    <col style={{ width: "18%" }} />  {/* Cuota */}
+                    <col style={{ width: "22%" }} />  {/* Inicio */}
+                    <col style={{ width: "12%" }} />  {/* Extras */}
+                    <col style={{ width: "8%" }} />   {/* Acciones */}
+                </colgroup>
+
                 <thead className={thead}>
                     <tr>
                     <th className={th}>Título</th>
-                    <th className={`${th} text-right`}>Cuota</th>
+                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                        Cuota
+                    </th>
                     <th className={th}>Inicio</th>
-                    <th className={`${th} text-right`}>Extras</th>
-                    <th className={`${th} text-right`}>Acciones</th>
+                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                        Extras
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                        Acciones
+                    </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -262,7 +289,7 @@ function startOfMonth(d = new Date()) {
                     loans.map((l: any) => (
                         <tr key={l.id} className={tr}>
                         <td className={td}>{l.title}</td>
-                        <td className={`${td} text-right`}>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
                             {Number(l.monthlyPayment).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
@@ -271,13 +298,13 @@ function startOfMonth(d = new Date()) {
                         <td className={td}>
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={`${td} text-right`}>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
                             {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={`${td} text-right`}>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
