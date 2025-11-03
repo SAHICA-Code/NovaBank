@@ -84,18 +84,17 @@ function startOfMonth(d = new Date()) {
     const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
     const td = "px-4 py-3 align-middle whitespace-nowrap";
 
-    // Más separación entre columnas
-    const thRightGap = "text-right pr-20 px-4 py-3 font-medium whitespace-nowrap"; // antes pr-10
-    const thLeftGap = "text-left pl-20 px-4 py-3 font-medium whitespace-nowrap"; // antes pl-10
-    const tdRightGap = "px-4 py-3 text-right pr-20 align-middle whitespace-nowrap"; // antes pr-10
-    const tdLeftGap = "px-4 py-3 text-left pl-20 align-middle whitespace-nowrap"; // antes pl-10
+    // Aumentamos la separación: 5rem = 80px
+    const thRightGap = "text-right pr-20 px-4 py-3 font-medium whitespace-nowrap";
+    const thLeftGap = "text-left pl-20 px-4 py-3 font-medium whitespace-nowrap";
+    const tdRightGap = "px-4 py-3 text-right pr-20 align-middle whitespace-nowrap";
+    const tdLeftGap = "px-4 py-3 text-left pl-20 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
         {/* HEADER */}
         <header className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
-            {/* Logo + título */}
             <div className="flex items-center gap-3 md:gap-4 justify-center md:justify-start">
                 <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14">
                 <Image
@@ -116,7 +115,6 @@ function startOfMonth(d = new Date()) {
                 </div>
             </div>
 
-            {/* Usuario */}
             <div className="text-center md:text-right px-1">
                 <p className="text-[11px] sm:text-xs text-gray-500">
                 Sesión iniciada como
@@ -124,7 +122,6 @@ function startOfMonth(d = new Date()) {
                 <UserMenu email={session.user?.email ?? ""} />
             </div>
 
-            {/* Acciones */}
             <div className="grid grid-cols-2 md:flex md:items-center gap-2 md:gap-3">
                 <Link
                 href="/cliente/prestamos/new"
@@ -176,7 +173,6 @@ function startOfMonth(d = new Date()) {
             {/* CUOTAS DEL MES */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
-
             <div className={tableWrap}>
                 <table className={tableBase}>
                 <thead className={thead}>
@@ -303,7 +299,6 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* Acciones móviles */}
             <div className="md:hidden flex gap-2">
             <ChangePasswordModal />
             <DeleteAccountButton email={session.user?.email ?? ""} />
