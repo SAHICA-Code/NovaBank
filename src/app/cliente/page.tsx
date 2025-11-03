@@ -19,6 +19,10 @@ function startOfMonth(d = new Date()) {
     return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
     }
 
+    function formatMoney(n: number) {
+    return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+    }
+
     export default async function ClienteDashboardPage() {
     noStore();
 
@@ -55,13 +59,20 @@ function startOfMonth(d = new Date()) {
         }),
     ]);
 
+    // Totales del mes
     const totalMes: number = installmentsThisMonth.reduce(
         (acc: number, i: { amount: any }) => acc + Number(i.amount ?? 0),
         0
     );
+
+    const totalPagadoMes: number = installmentsThisMonth
+        .filter((i: any) => i.status === "PAID")
+        .reduce((acc: number, i: any) => acc + Number(i.amount ?? 0), 0);
+
     const prestamosActivos: number = loans.filter(
         (l: { finishedAt: Date | null }) => !l.finishedAt
     ).length;
+
     const cuotasPendientesMes: number = installmentsThisMonth.filter(
         (i: { status: string }) => i.status !== "PAID"
     ).length;
@@ -70,6 +81,8 @@ function startOfMonth(d = new Date()) {
         (acc: number, it: { amount: any }) => acc + Number(it.amount ?? 0),
         0
     );
+
+    const progresoMes = totalMes > 0 ? (totalPagadoMes / totalMes) * 100 : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
@@ -99,7 +112,9 @@ function startOfMonth(d = new Date()) {
 
             {/* Usuario */}
             <div className="text-center md:text-right px-1">
-                <p className="text-[11px] sm:text-xs text-gray-500">Sesión iniciada como</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">
+                Sesión iniciada como
+                </p>
                 <UserMenu email={session.user?.email ?? ""} />
             </div>
 
@@ -139,10 +154,20 @@ function startOfMonth(d = new Date()) {
 
         {/* MAIN */}
         <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
-            {/* MÉTRICAS (añadimos Pendiente total como 4ª tarjeta) */}
+            {/* MÉTRICAS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard title="Pagos de este mes" value={totalMes} money />
-            <MetricCard title="Préstamos activos" value={prestamosActivos} />
+            {/* Total del mes */}
+            <MetricCard title="Gasto total del mes" value={totalMes} money />
+
+            {/* Progreso del mes: “X de Y pagado” + barra */}
+            <MetricCard
+                title="Pagado este mes"
+                value={totalPagadoMes}
+                money
+                subtitle={`${formatMoney(totalPagadoMes)} de ${formatMoney(totalMes)} pagado`}
+                progress={progresoMes}
+            />
+
             <MetricCard title="Cuotas pendientes este mes" value={cuotasPendientesMes} />
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
@@ -165,7 +190,7 @@ function startOfMonth(d = new Date()) {
                     {installmentsThisMonth.length === 0 ? (
                     <tr>
                         <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                        No hay cuotas pendientes este mes.
+                        No hay cuotas este mes.
                         </td>
                     </tr>
                     ) : (
@@ -282,12 +307,19 @@ function startOfMonth(d = new Date()) {
     value,
     money = false,
     accent = false,
+    subtitle,
+    progress,
     }: {
     title: string;
     value: number;
     money?: boolean;
     accent?: boolean;
+    subtitle?: string;
+    /** porcentaje 0–100 para mostrar barra de progreso opcional */
+    progress?: number;
     }) {
+    const pct = Math.max(0, Math.min(100, progress ?? 0));
+
     return (
         <div className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-4 shadow-sm">
         <p className="text-sm text-gray-500">{title}</p>
@@ -296,10 +328,25 @@ function startOfMonth(d = new Date()) {
             accent ? "text-indigo-700" : "text-gray-900"
             }`}
         >
-            {money
-            ? value.toLocaleString("es-ES", { style: "currency", currency: "EUR" })
-            : value}
+            {money ? formatMoney(value) : value}
         </p>
+
+        {subtitle ? (
+            <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
+        ) : null}
+
+        {progress !== undefined ? (
+            <div className="mt-2">
+            <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                <div
+                className="h-2 bg-indigo-600"
+                style={{ width: `${pct}%` }}
+                aria-label={`Progreso ${pct.toFixed(0)}%`}
+                />
+            </div>
+            <div className="mt-1 text-[11px] text-gray-500">{pct.toFixed(0)}%</div>
+            </div>
+        ) : null}
         </div>
     );
 }

@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
+    const router = useRouter();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -14,6 +16,7 @@ export default function RegisterPage() {
         e.preventDefault();
         setLoading(true);
         try {
+        // Ajusta esta ruta si tu endpoint de registro es distinto:
         const res = await fetch("/api/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -26,6 +29,7 @@ export default function RegisterPage() {
             return;
         }
 
+        // Inicia sesión automáticamente tras registrarse
         await signIn("credentials", {
             email,
             password,
@@ -39,11 +43,12 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50 px-4">
         <div className="w-full max-w-md bg-white/80 backdrop-blur-xl p-6 sm:p-8 rounded-2xl shadow-lg border border-black/5 text-center">
+            {/* Logo y título */}
             <div className="flex flex-col items-center mb-6">
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 mb-2">
                 <Image
-                src="/logo.png"
-                alt="Logo Nova Bank"
+                src="/logo.png"             // asegúrate de tener /public/logo.png
+                alt="Logo novabank"
                 fill
                 className="object-contain"
                 priority
@@ -57,9 +62,12 @@ export default function RegisterPage() {
             </p>
             </div>
 
+            {/* Formulario */}
             <form onSubmit={onSubmit} className="space-y-4 text-left">
             <div>
-                <label className="block text-sm font-medium mb-1">Nombre (opcional)</label>
+                <label className="block text-sm font-medium mb-1">
+                Nombre (opcional)
+                </label>
                 <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}

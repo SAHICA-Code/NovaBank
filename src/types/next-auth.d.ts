@@ -1,4 +1,5 @@
 // src/types/next-auth.d.ts
+import NextAuth from "next-auth";
 
 declare module "next-auth" {
     interface Session {
@@ -7,6 +8,8 @@ declare module "next-auth" {
         name?: string | null;
         email?: string | null;
         image?: string | null;
+
+        // Añadidos para paneles
         clientProfileId?: string | null;
         companyProfileId?: string | null;
         };
@@ -17,6 +20,7 @@ declare module "next-auth" {
         name?: string | null;
         email?: string | null;
         image?: string | null;
+
         clientProfileId?: string | null;
         companyProfileId?: string | null;
     }
@@ -28,5 +32,3 @@ declare module "next-auth" {
         companyProfileId?: string | null;
     }
 }
-
-export {};

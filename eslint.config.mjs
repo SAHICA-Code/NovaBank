@@ -1,38 +1,25 @@
-// eslint.config.mjs — ESLint 9 (Flat Config) con Next + TS
-import tseslint from "typescript-eslint";
-import nextPlugin from "@next/eslint-plugin-next";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
 
-export default [
-  // Ignora carpetas generadas
-  { ignores: ["node_modules", ".next", "dist", ".vercel"] },
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-  // Reglas recomendadas de Next + Core Web Vitals (traducidas a Flat)
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    files: ["**/*.{js,jsx,ts,tsx}"],
-    plugins: {
-      "@next/next": nextPlugin
-    },
-    rules: {
-      // Equivalente a:
-      // "extends": ["next", "next/core-web-vitals"]
-      ...(nextPlugin.configs.recommended?.rules ?? {}),
-      ...(nextPlugin.configs["core-web-vitals"]?.rules ?? {})
-    }
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
   },
-
-  // Reglas para TypeScript
-  ...tseslint.config({
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: { parser: tseslint.parser },
-    plugins: { "@typescript-eslint": tseslint.plugin },
-    rules: {
-      // No bloquees por 'any' mientras tipamos con calma
-      "@typescript-eslint/no-explicit-any": "off",
-      // Aviso (no error) para vars no usadas; permite prefijo "_"
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true }
-      ]
-    }
-  })
 ];
+
+export default eslintConfig;
