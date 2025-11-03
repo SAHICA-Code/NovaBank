@@ -1,8 +1,10 @@
+// src/app/auth/reset-password/page.tsx
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
     const sp = useSearchParams();
     const router = useRouter();
     const token = sp.get("token") ?? "";
@@ -30,7 +32,8 @@ export default function ResetPasswordPage() {
             body: JSON.stringify({ token, newPassword }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "No se pudo cambiar la contraseña");
+        if (!res.ok)
+            throw new Error(data?.error || "No se pudo cambiar la contraseña");
         setMsg("Contraseña actualizada. Ya puedes iniciar sesión.");
         setTimeout(() => router.push("/auth/login"), 1200);
         } catch (e: any) {
@@ -62,11 +65,22 @@ export default function ResetPasswordPage() {
             required
             minLength={8}
             />
-            <button className="rounded-md bg-indigo-600 text-white px-4 py-2 disabled:opacity-50" disabled={loading}>
+            <button
+            className="rounded-md bg-indigo-600 text-white px-4 py-2 disabled:opacity-50"
+            disabled={loading}
+            >
             {loading ? "Guardando..." : "Cambiar contraseña"}
             </button>
             {msg && <p className="text-sm mt-2">{msg}</p>}
         </form>
         </div>
+    );
+    }
+
+    export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={null}>
+        <ResetPasswordInner />
+        </Suspense>
     );
 }
