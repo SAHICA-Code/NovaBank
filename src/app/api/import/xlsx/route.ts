@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+// src/app/api/import/xlsx/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import ExcelJS from "exceljs";
+import { PaymentStatus } from "@prisma/client";
 
 // Helpers --------------------------
-function normalizeHeader(s: any) {
-    if (!s) return "";
+function normalizeHeader(s: unknown) {
+    if (s == null) return "";
     return String(s)
         .toLowerCase()
         .normalize("NFD")
@@ -15,7 +17,7 @@ function normalizeHeader(s: any) {
         .trim();
     }
 
-    function parseNumber(v: any): number {
+    function parseNumber(v: unknown): number {
     if (typeof v === "number") return v;
     if (v == null) return NaN;
     const s = String(v).replace(/\s/g, "").replace("€", "").replace(",", ".");
@@ -26,50 +28,38 @@ function normalizeHeader(s: any) {
     function pad2(n: number) {
     return n < 10 ? `0${n}` : `${n}`;
     }
+
     function toISODate(d: Date) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     }
 
-    function parseDate(v: any): Date | null {
+    function parseDate(v: unknown): Date | null {
     if (!v) return null;
     if (v instanceof Date && !isNaN(v.getTime())) return v;
     const s = String(v).trim();
 
-    // dd/mm/yyyy
     const m1 = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(s);
     if (m1) {
         const d = new Date(Number(m1[3]), Number(m1[2]) - 1, Number(m1[1]));
         return isNaN(d.getTime()) ? null : d;
     }
-    // yyyy-mm-dd
     const m2 = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/.exec(s);
     if (m2) {
         const d = new Date(Number(m2[1]), Number(m2[2]) - 1, Number(m2[3]));
         return isNaN(d.getTime()) ? null : d;
     }
-    // Fallback
+
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
     }
 
-    function normalizeStatus(v: any): "PENDING" | "PAID" {
+    function normalizeStatus(v: unknown): PaymentStatus {
     const s = String(v || "").toLowerCase();
-    if (s.includes("paid") || s.includes("pagad")) return "PAID";
-    return "PENDING";
+    if (s.includes("paid") || s.includes("pagad")) return PaymentStatus.PAID;
+    return PaymentStatus.PENDING;
     }
 
-    // Expected headers in the detail table
-    const REQUIRED = [
-    "cliente",
-    "inversion (€)",
-    "recargo (%)",
-    "inicio",
-    "vencimiento",
-    "cuota (€)",
-    "estado",
-    ];
-
-    export async function POST(req: Request) {
+    export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
         return NextResponse.json({ error: "No auth" }, { status: 401 });
@@ -85,37 +75,53 @@ function normalizeHeader(s: any) {
         const form = await req.formData();
         const file = form.get("file") as File | null;
         if (!file) {
-        return NextResponse.json({ error: "Falta el archivo 'file' (.xlsx)" }, { status: 400 });
+        return NextResponse.json(
+            { error: "Falta el archivo 'file' (.xlsx)" },
+            { status: 400 }
+        );
         }
 
-        const buf = Buffer.from(await file.arrayBuffer());
+        // Leer el archivo Excel directamente como ArrayBuffer (sin Buffer)
+        const ab = await file.arrayBuffer();
         const wb = new ExcelJS.Workbook();
-        await wb.xlsx.load(buf);
+        await wb.xlsx.load(ab as any); // ✅ usa el ArrayBuffer directamente, sin Buffer
+
         const ws = wb.worksheets[0];
         if (!ws) {
-        return NextResponse.json({ error: "No se encontró hoja en el Excel" }, { status: 400 });
+        return NextResponse.json(
+            { error: "No se encontró hoja en el Excel" },
+            { status: 400 }
+        );
         }
 
-        // 1) localizar la fila de cabeceras de la TABLA de abajo
+        // 1) localizar la fila de cabeceras
         let headerRowIdx = -1;
         let headerMap: Record<string, number> = {};
 
         for (let r = 1; r <= Math.min(ws.rowCount, 50); r++) {
         const row = ws.getRow(r);
-        const labels = row.values
-            .map((x: any) => normalizeHeader(x?.text ?? x))
+
+        const labels = (row.values as unknown[])
+            .map((x) =>
+            normalizeHeader(
+                (x as { text?: string } | undefined)?.text ?? (x as unknown)
+            )
+            )
             .filter(Boolean);
 
-        // ¿Contiene al menos "cliente" e "inversion"?
-        if (labels.includes("cliente") && (labels.includes("inversion (€)") || labels.includes("inversion (€)"))) {
-            // construimos un mapa header -> columna
+        if (
+            labels.includes("cliente") &&
+            (labels.includes("inversion (€)") || labels.includes("inversion (€)"))
+        ) {
             const map: Record<string, number> = {};
             row.eachCell((cell, col) => {
-            const key = normalizeHeader(cell.value?.['text'] ?? cell.value);
+            const val =
+                (cell.value as { text?: string } | null | undefined)?.["text"] ??
+                (cell.value as unknown);
+            const key = normalizeHeader(val);
             if (key) map[key] = col;
             });
 
-            // permitimos "recargo (%)" o "% recargo"
             const hasAll =
             (map["cliente"] ?? 0) &&
             (map["inversion (€)"] ?? 0) &&
@@ -143,7 +149,10 @@ function normalizeHeader(s: any) {
 
         if (headerRowIdx < 0) {
         return NextResponse.json(
-            { error: "No se localizaron las cabeceras de la tabla de cuotas. Asegúrate de usar el formato exportado." },
+            {
+            error:
+                "No se localizaron las cabeceras de la tabla de cuotas. Asegúrate de usar el formato exportado.",
+            },
             { status: 400 }
         );
         }
@@ -156,24 +165,31 @@ function normalizeHeader(s: any) {
         start: Date;
         due: Date;
         paymentAmount: number;
-        status: "PENDING" | "PAID";
+        status: PaymentStatus;
         };
 
         const details: DetailRow[] = [];
         for (let r = headerRowIdx + 1; r <= ws.rowCount; r++) {
         const row = ws.getRow(r);
         const cName = String(row.getCell(headerMap.cliente).value ?? "").trim();
-        if (!cName) continue; // saltar vacías
+        if (!cName) continue;
 
         const amount = parseNumber(row.getCell(headerMap.inversion).value);
-        const markup = parseFloat(String(row.getCell(headerMap.recargo).value ?? "").replace(",", "."));
+        const markup = parseFloat(
+            String(row.getCell(headerMap.recargo).value ?? "").replace(",", ".")
+        );
         const start = parseDate(row.getCell(headerMap.inicio).value);
         const due = parseDate(row.getCell(headerMap.vencimiento).value);
         const pay = parseNumber(row.getCell(headerMap.cuota).value);
         const status = normalizeStatus(row.getCell(headerMap.estado).value);
 
-        if (!Number.isFinite(amount) || isNaN(markup) || !start || !due || !Number.isFinite(pay)) {
-            // fila inválida: la descartamos con aviso
+        if (
+            !Number.isFinite(amount) ||
+            isNaN(markup) ||
+            !start ||
+            !due ||
+            !Number.isFinite(pay)
+        ) {
             continue;
         }
 
@@ -189,20 +205,22 @@ function normalizeHeader(s: any) {
         }
 
         if (details.length === 0) {
-        return NextResponse.json({ error: "No se encontraron filas válidas para importar." }, { status: 400 });
+        return NextResponse.json(
+            { error: "No se encontraron filas válidas para importar." },
+            { status: 400 }
+        );
         }
 
-        // 3) agrupar por (cliente, amount, markup, start)
-        type GroupKey = string;
-        const groups = new Map<GroupKey, DetailRow[]>();
-
+        // 3) agrupar por cliente
+        const groups = new Map<string, DetailRow[]>();
         for (const d of details) {
-        const key = `${d.clientName}__${d.amount}__${d.markup}__${toISODate(d.start)}`;
+        const key = `${d.clientName}__${d.amount}__${d.markup}__${toISODate(
+            d.start
+        )}`;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(d);
         }
 
-        // 4) escribir en BD (SOBREESCRIBIENDO duplicados por defecto)
         const report = {
         createdClients: 0,
         reusedClients: 0,
@@ -213,7 +231,7 @@ function normalizeHeader(s: any) {
         };
 
         await prisma.$transaction(async (tx) => {
-        for (const [key, rows] of groups) {
+        for (const [, rows] of groups) {
             const sample = rows[0]!;
             const clientName = sample.clientName.trim();
             const amount = sample.amount;
@@ -222,7 +240,6 @@ function normalizeHeader(s: any) {
             const months = rows.length;
             const totalToRepay = amount * (1 + markup / 100);
 
-            // cliente
             let client = await tx.client.findFirst({
             where: { ownerId: user.id, name: clientName },
             select: { id: true },
@@ -237,7 +254,6 @@ function normalizeHeader(s: any) {
             report.reusedClients += 1;
             }
 
-            // ¿existe ya el préstamo "igual"?
             let loan = await tx.loan.findFirst({
             where: {
                 ownerId: user.id,
@@ -250,7 +266,6 @@ function normalizeHeader(s: any) {
             });
 
             if (loan) {
-            // sobrescribir: borrar cuotas y actualizar préstamo
             const del = await tx.payment.deleteMany({ where: { loanId: loan.id } });
             report.replacedPayments += del.count;
 
@@ -263,7 +278,6 @@ function normalizeHeader(s: any) {
                 },
             });
             } else {
-            // crear préstamo
             loan = await tx.loan.create({
                 data: {
                 ownerId: user.id,
@@ -279,25 +293,29 @@ function normalizeHeader(s: any) {
             report.upsertedLoans += 1;
             }
 
-            // crear cuotas del grupo
-            if (rows.length > 0) {
             await tx.payment.createMany({
-                data: rows.map((r) => ({
+            data: rows.map((r) => ({
                 loanId: loan!.id,
                 dueDate: r.due,
                 amount: r.paymentAmount,
                 status: r.status,
-                paidAt: r.status === "PAID" ? new Date() : null,
-                })),
+                paidAt: r.status === PaymentStatus.PAID ? new Date() : null,
+            })),
             });
             report.createdPayments += rows.length;
-            }
         }
         });
 
         return NextResponse.json({ ok: true, report });
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
-        return NextResponse.json({ error: "Error al importar", detail: String(e?.message ?? e) }, { status: 500 });
+        const message =
+        e && typeof e === "object" && "message" in e
+            ? String((e as { message?: string }).message)
+            : String(e);
+        return NextResponse.json(
+        { error: "Error al importar", detail: message },
+        { status: 500 }
+        );
     }
 }
