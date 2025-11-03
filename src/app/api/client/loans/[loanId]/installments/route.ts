@@ -1,14 +1,15 @@
 // src/app/api/client/loans/[loanId]/installments/route.ts
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// ❌ No importamos ningún enum de @prisma/client
+type Params = { loanId: string };
 
+// GET: lista las cuotas del préstamo del usuario
 export async function GET(
     _req: NextRequest,
-    context: { params: Promise<{ loanId: string }> }
+    context: { params: Promise<Params> }
     ) {
     try {
         const session = await getServerSession(authOptions);
@@ -18,11 +19,15 @@ export async function GET(
 
         const { loanId } = await context.params;
 
-        // Modelos del panel cliente según tu schema actual
+        // Validar que el préstamo pertenece al usuario
         const loan = await prisma.clientLoan.findFirst({
-        where: { id: loanId, userId: session.user.id },
+        where: {
+            id: loanId,
+            userId: session.user.id,
+        },
         select: { id: true },
         });
+
         if (!loan) {
         return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
         }
@@ -32,11 +37,11 @@ export async function GET(
         orderBy: { dueDate: "asc" },
         select: {
             id: true,
+            title: true,
             dueDate: true,
             amount: true,
-            status: true,
+            status: true, // "PENDING" | "PAID"
             paidAt: true,
-            title: true,
         },
         });
 
@@ -47,9 +52,9 @@ export async function GET(
     }
     }
 
+    // PATCH: marca una cuota como pagada (tu enum solo tiene PENDING/PAID)
     export async function PATCH(
-    req: NextRequest,
-    context: { params: Promise<{ loanId: string }> }
+    req: NextRequest
     ) {
     try {
         const session = await getServerSession(authOptions);
@@ -57,32 +62,43 @@ export async function GET(
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const { loanId } = await context.params;
-        const body = await req.json().catch(() => ({}));
-        const { installmentId, action } = body as { installmentId?: string; action?: string };
+        const body = (await req.json()) as {
+        installmentId?: string;
+        action?: "markPaid";
+        };
 
-        if (!installmentId || !action) {
-        return NextResponse.json({ error: "Faltan campos: installmentId, action" }, { status: 400 });
+        const installmentId = body?.installmentId ?? "";
+        const action = body?.action ?? "";
+
+        if (!installmentId || action !== "markPaid") {
+        return NextResponse.json(
+            { error: "Faltan campos o acción no soportada" },
+            { status: 400 }
+        );
         }
 
-        // Verificar pertenencia
+        // Verificar pertenencia: la cuota debe ser de un préstamo del usuario
         const inst = await prisma.clientInstallment.findUnique({
         where: { id: installmentId },
-        select: { id: true, loan: { select: { id: true, userId: true } } },
+        select: {
+            id: true,
+            loan: { select: { userId: true } },
+        },
         });
+
         if (!inst || inst.loan.userId !== session.user.id) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
         }
 
-        if (action === "markPaid") {
         await prisma.clientInstallment.update({
-            where: { id: installmentId },
-            data: { status: "PAID", paidAt: new Date() }, // ← literal string, tipado por Prisma
+        where: { id: installmentId },
+        data: {
+            status: "PAID",
+            paidAt: new Date(),
+        },
         });
-        return NextResponse.json({ ok: true });
-        }
 
-        return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
+        return NextResponse.json({ ok: true });
     } catch (e) {
         console.error("PATCH /api/client/loans/[loanId]/installments error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
