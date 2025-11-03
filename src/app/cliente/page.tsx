@@ -182,7 +182,7 @@ function startOfMonth(d = new Date()) {
                     </th>
                     <th className={thRightGap}>Importe</th>
                     <th className={thLeftGap}>Fecha</th>
-                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                    <th className="px-8 py-3 text-right font-medium whitespace-nowrap">
                         Estado
                     </th>
                     </tr>
