@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { InstallmentStatus } from "@prisma/client";
+import { ClientInstallmentStatus } from "@prisma/client";
 
 type RouteContext = {
     params: Promise<{ loanId: string }>;
@@ -11,8 +11,7 @@ type RouteContext = {
 
     type PatchBody = {
     installmentId: string;
-    action: "markPaid" | "markPartial";
-    actualPaid?: number;
+    action: "markPaid"; // Solo soportado por tu esquema actual
     };
 
     export async function GET(_req: NextRequest, context: RouteContext) {
@@ -24,11 +23,11 @@ type RouteContext = {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        // Validar que el préstamo pertenece al usuario
-        const loan = await prisma.personalLoan.findFirst({
+        // Validar que el préstamo (ClientLoan) pertenece al usuario
+        const loan = await prisma.clientLoan.findFirst({
         where: {
             id: loanId,
-            client: { userId: session.user.id },
+            userId: session.user.id,
         },
         select: { id: true },
         });
@@ -37,18 +36,18 @@ type RouteContext = {
         return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
         }
 
-        const installments = await prisma.personalInstallment.findMany({
+        const installments = await prisma.clientInstallment.findMany({
         where: { loanId: loan.id },
         orderBy: { dueDate: "asc" },
         select: {
             id: true,
+            title: true,
             dueDate: true,
             amount: true,
             status: true,
             paidAt: true,
-            principal: true,
-            interest: true,
-            extras: true,
+            createdAt: true,
+            updatedAt: true,
         },
         });
 
@@ -61,8 +60,7 @@ type RouteContext = {
 
     export async function PATCH(req: NextRequest, context: RouteContext) {
     try {
-        // Aunque no lo uses ahora, mantener la lectura de params asegura consistencia de tipos
-        await context.params;
+        await context.params; // por consistencia, aunque no lo uses aquí
 
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
@@ -74,7 +72,7 @@ type RouteContext = {
         return NextResponse.json({ error: "Body inválido" }, { status: 400 });
         }
 
-        const { installmentId, action, actualPaid } = body;
+        const { installmentId, action } = body;
         if (!installmentId || !action) {
         return NextResponse.json(
             { error: "Faltan campos: installmentId, action" },
@@ -82,46 +80,25 @@ type RouteContext = {
         );
         }
 
-        // Verificar pertenencia (el installment debe ser de un loan del usuario)
-        const inst = await prisma.personalInstallment.findUnique({
+        // Verificar pertenencia: el installment debe ser de un loan del usuario
+        const inst = await prisma.clientInstallment.findUnique({
         where: { id: installmentId },
         select: {
             id: true,
-            amount: true,
-            loan: { select: { id: true, client: { select: { userId: true } } } },
+            loan: { select: { id: true, userId: true } },
         },
         });
 
-        if (!inst || inst.loan.client.userId !== session.user.id) {
+        if (!inst || inst.loan.userId !== session.user.id) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
         }
 
         if (action === "markPaid") {
-        await prisma.personalInstallment.update({
+        await prisma.clientInstallment.update({
             where: { id: installmentId },
             data: {
-            status: InstallmentStatus.PAID,
+            status: ClientInstallmentStatus.PAID,
             paidAt: new Date(),
-            actualPaid: null,
-            },
-        });
-        return NextResponse.json({ ok: true });
-        }
-
-        if (action === "markPartial") {
-        const paid = Number(actualPaid);
-        if (!Number.isFinite(paid) || paid <= 0) {
-            return NextResponse.json(
-            { error: "actualPaid debe ser un número > 0" },
-            { status: 400 }
-            );
-        }
-        await prisma.personalInstallment.update({
-            where: { id: installmentId },
-            data: {
-            status: InstallmentStatus.PARTIAL,
-            paidAt: new Date(),
-            actualPaid: paid,
             },
         });
         return NextResponse.json({ ok: true });
