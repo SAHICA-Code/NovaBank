@@ -54,7 +54,6 @@ function startOfMonth(d = new Date()) {
         }),
     ]);
 
-    // Totales del mes
     const totalMes: number = installmentsThisMonth.reduce(
         (acc: number, i: { amount: any }) => acc + Number(i.amount ?? 0),
         0
@@ -75,7 +74,7 @@ function startOfMonth(d = new Date()) {
 
     const progresoMes = totalMes > 0 ? (totalPagadoMes / totalMes) * 100 : 0;
 
-    // Estilos de tabla (look limpio + scroll horizontal)
+    // Estilos de tabla
     const tableWrap =
         "rounded-2xl border border-black/5 bg-white/80 backdrop-blur overflow-x-auto";
     const tableBase = "w-full min-w-[720px] text-sm text-gray-800";
@@ -84,6 +83,12 @@ function startOfMonth(d = new Date()) {
     const th = "px-4 py-3 text-left font-medium whitespace-nowrap";
     const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
     const td = "px-4 py-3 align-middle whitespace-nowrap";
+
+    // Nuevas clases con separación horizontal
+    const thRightGap = "text-right pr-10 px-4 py-3 font-medium whitespace-nowrap";
+    const thLeftGap = "text-left pl-10 px-4 py-3 font-medium whitespace-nowrap";
+    const tdRightGap = "px-4 py-3 text-right pr-10 align-middle whitespace-nowrap";
+    const tdLeftGap = "px-4 py-3 text-left pl-10 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
@@ -146,7 +151,6 @@ function startOfMonth(d = new Date()) {
             </div>
             </div>
 
-            {/* Modales (desktop) */}
             <div className="hidden md:block">
             <ChangePasswordModal />
             <DeleteAccountButton email={session.user?.email ?? ""} />
@@ -169,29 +173,19 @@ function startOfMonth(d = new Date()) {
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
 
-            {/* CUOTAS DEL MES (Préstamo → Importe → Fecha → Estado) */}
+            {/* CUOTAS DEL MES */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
 
-            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
+            <div className={tableWrap}>
                 <table className={tableBase}>
-                {/* Anchos para separar bien Importe ↔ Fecha y alinear Estado a la derecha */}
-                <colgroup>
-                    <col style={{ width: "42%" }} />  {/* Préstamo */}
-                    <col style={{ width: "18%" }} />  {/* Importe */}
-                    <col style={{ width: "22%" }} />  {/* Fecha */}
-                    <col style={{ width: "18%" }} />  {/* Estado (derecha) */}
-                </colgroup>
-
                 <thead className={thead}>
                     <tr>
                     <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">
                         Préstamo
                     </th>
-                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">
-                        Importe
-                    </th>
-                    <th className={th}>Fecha</th>
+                    <th className={thRightGap}>Importe</th>
+                    <th className={thLeftGap}>Fecha</th>
                     <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
                         Estado
                     </th>
@@ -210,13 +204,13 @@ function startOfMonth(d = new Date()) {
                         <td className="px-2.5 py-3 align-middle whitespace-nowrap">
                             {i.title ?? "—"}
                         </td>
-                        <td className="px-2.5 py-3 align-middle whitespace-nowrap text-right">
+                        <td className={tdRightGap}>
                             {Number(i.amount ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={td}>
+                        <td className={tdLeftGap}>
                             {new Date(i.dueDate).toLocaleDateString("es-ES")}
                         </td>
                         <td className="px-4 py-3">
@@ -240,7 +234,7 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* TUS PRÉSTAMOS (Título → Cuota → Inicio → Extras → Acciones) */}
+            {/* TUS PRÉSTAMOS */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Tus préstamos</h3>
@@ -252,24 +246,13 @@ function startOfMonth(d = new Date()) {
                 </Link>
             </div>
 
-            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
+            <div className={tableWrap}>
                 <table className={tableBase}>
-                {/* Anchos para separar bien Cuota ↔ Inicio; Acciones a la derecha */}
-                <colgroup>
-                    <col style={{ width: "40%" }} />  {/* Título */}
-                    <col style={{ width: "18%" }} />  {/* Cuota */}
-                    <col style={{ width: "22%" }} />  {/* Inicio */}
-                    <col style={{ width: "12%" }} />  {/* Extras */}
-                    <col style={{ width: "8%" }} />   {/* Acciones */}
-                </colgroup>
-
                 <thead className={thead}>
                     <tr>
                     <th className={th}>Título</th>
-                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
-                        Cuota
-                    </th>
-                    <th className={th}>Inicio</th>
+                    <th className={thRightGap}>Cuota</th>
+                    <th className={thLeftGap}>Inicio</th>
                     <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
                         Extras
                     </th>
@@ -289,22 +272,22 @@ function startOfMonth(d = new Date()) {
                     loans.map((l: any) => (
                         <tr key={l.id} className={tr}>
                         <td className={td}>{l.title}</td>
-                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                        <td className={tdRightGap}>
                             {Number(l.monthlyPayment).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={td}>
+                        <td className={tdLeftGap}>
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                        <td className="px-4 py-3 text-right align-middle whitespace-nowrap">
                             {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                        <td className="px-4 py-3 text-right">
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
