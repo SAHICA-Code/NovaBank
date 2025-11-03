@@ -88,7 +88,7 @@ function startOfMonth(d = new Date()) {
     const thRightGap = "text-right pr-20 px-4 py-3 font-medium whitespace-nowrap";
     const thLeftGap = "text-left pl-20 px-4 py-3 font-medium whitespace-nowrap";
     const tdRightGap = "px-4 py-3 text-right pr-20 align-middle whitespace-nowrap";
-    const tdLeftGap = "px-4 py-3 text-left pl-20 align-middle whitespace-nowrap";
+    const tdLeftGap = "px-4 py-3 text-left pl-10 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
