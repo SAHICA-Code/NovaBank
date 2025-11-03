@@ -180,8 +180,8 @@ function startOfMonth(d = new Date()) {
                 <table className={tableBase}>
                 <thead className={thead}>
                     <tr>
-                    <th className={th}>Préstamo</th>
-                    <th className={`${th} text-right`}>Importe</th>
+                    <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">Préstamo</th>
+                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">Importe</th>
                     <th className={th}>Fecha</th>
                     <th className={th}>Estado</th>
                     </tr>
@@ -196,8 +196,8 @@ function startOfMonth(d = new Date()) {
                     ) : (
                     installmentsThisMonth.map((i: any) => (
                         <tr key={i.id} className={tr}>
-                        <td className={td}>{i.title ?? "—"}</td>
-                        <td className={`${td} text-right`}>
+                        <td className="px-2.5 py-3 align-middle whitespace-nowrap">{i.title ?? "—"}</td>
+                        <td className="px-2.5 py-3 align-middle whitespace-nowrap text-right">
                             {Number(i.amount ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
