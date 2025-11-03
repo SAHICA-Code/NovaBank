@@ -29,7 +29,6 @@ function startOfMonth(d = new Date()) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) redirect("/auth/login");
 
-    // Exigir perfil cliente: si no lo tiene, al onboarding
     const profile = await prisma.clientProfile.findUnique({
         where: { userId: session.user.id },
         select: { id: true },
@@ -46,10 +45,7 @@ function startOfMonth(d = new Date()) {
         orderBy: { createdAt: "desc" },
         }),
         prisma.clientInstallment.findMany({
-        where: {
-            userId: session.user.id,
-            dueDate: { gte: from, lte: to },
-        },
+        where: { userId: session.user.id, dueDate: { gte: from, lte: to } },
         orderBy: { dueDate: "asc" },
         }),
         prisma.clientInstallment.findMany({
@@ -58,7 +54,6 @@ function startOfMonth(d = new Date()) {
         }),
     ]);
 
-    // Totales del mes
     const totalMes: number = installmentsThisMonth.reduce(
         (acc: number, i: { amount: any }) => acc + Number(i.amount ?? 0),
         0
@@ -67,10 +62,6 @@ function startOfMonth(d = new Date()) {
     const totalPagadoMes: number = installmentsThisMonth
         .filter((i: any) => i.status === "PAID")
         .reduce((acc: number, i: any) => acc + Number(i.amount ?? 0), 0);
-
-    const prestamosActivos: number = loans.filter(
-        (l: { finishedAt: Date | null }) => !l.finishedAt
-    ).length;
 
     const cuotasPendientesMes: number = installmentsThisMonth.filter(
         (i: { status: string }) => i.status !== "PAID"
@@ -82,6 +73,16 @@ function startOfMonth(d = new Date()) {
     );
 
     const progresoMes = totalMes > 0 ? (totalPagadoMes / totalMes) * 100 : 0;
+
+    // === clases de tabla (mismo “look” que empresa) ===
+    const tableWrap =
+        "rounded-2xl border border-black/5 bg-white/80 backdrop-blur overflow-x-auto";
+    const tableBase = "w-full min-w-[720px] text-sm text-gray-800";
+    const thead =
+        "bg-gray-50/80 text-gray-600 sticky top-0 z-0 border-b border-gray-200";
+    const th = "px-4 py-3 text-left font-medium whitespace-nowrap";
+    const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
+    const td = "px-4 py-3 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
@@ -111,7 +112,9 @@ function startOfMonth(d = new Date()) {
 
             {/* Usuario */}
             <div className="text-center md:text-right px-1">
-                <p className="text-[11px] sm:text-xs text-gray-500">Sesión iniciada como</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">
+                Sesión iniciada como
+                </p>
                 <UserMenu email={session.user?.email ?? ""} />
             </div>
 
@@ -165,22 +168,18 @@ function startOfMonth(d = new Date()) {
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
 
-            {/* CUOTAS DEL MES */}
+            {/* CUOTAS DEL MES (estilo empresa) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
 
-            {/* contenedor con scroll horizontal en móvil */}
-            <div
-                className="rounded-xl border border-gray-200 bg-white/70 overflow-x-auto"
-                style={{ WebkitOverflowScrolling: "touch" as any }}
-            >
-                <table className="w-full min-w-[640px] text-sm">
-                <thead className="bg-gray-50 text-gray-600">
+            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
+                <table className={tableBase}>
+                <thead className={thead}>
                     <tr>
-                    <th className="text-left px-4 py-2 whitespace-nowrap">Fecha</th>
-                    <th className="text-left px-4 py-2 whitespace-nowrap">Préstamo</th>
-                    <th className="text-right px-4 py-2 whitespace-nowrap">Importe</th>
-                    <th className="text-left px-4 py-2 whitespace-nowrap">Estado</th>
+                    <th className={th}>Fecha</th>
+                    <th className={th}>Préstamo</th>
+                    <th className={`${th} text-right`}>Importe</th>
+                    <th className={th}>Estado</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -192,24 +191,24 @@ function startOfMonth(d = new Date()) {
                     </tr>
                     ) : (
                     installmentsThisMonth.map((i: any) => (
-                        <tr key={i.id} className="border-t hover:bg-white transition">
-                        <td className="px-4 py-2 whitespace-nowrap">
+                        <tr key={i.id} className={tr}>
+                        <td className={td}>
                             {new Date(i.dueDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap">{i.title ?? "—"}</td>
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <td className={td}>{i.title ?? "—"}</td>
+                        <td className={`${td} text-right`}>
                             {Number(i.amount ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
+                        <td className={td}>
                             {i.status === "PAID" ? (
-                            <span className="inline-block rounded bg-green-100 px-2 py-1 text-xs text-green-800">
-                                Pagado
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
+                                Pagada
                             </span>
                             ) : (
-                            <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
+                            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-200">
                                 Pendiente
                             </span>
                             )}
@@ -222,7 +221,7 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* TUS PRÉSTAMOS */}
+            {/* TUS PRÉSTAMOS (estilo empresa) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Tus préstamos</h3>
@@ -234,19 +233,15 @@ function startOfMonth(d = new Date()) {
                 </Link>
             </div>
 
-            {/* contenedor con scroll horizontal en móvil */}
-            <div
-                className="rounded-xl border border-gray-200 bg-white/70 overflow-x-auto"
-                style={{ WebkitOverflowScrolling: "touch" as any }}
-            >
-                <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-gray-50 text-gray-600">
+            <div className={tableWrap} style={{ WebkitOverflowScrolling: "touch" as any }}>
+                <table className={tableBase}>
+                <thead className={thead}>
                     <tr>
-                    <th className="text-left px-4 py-2 whitespace-nowrap">Título</th>
-                    <th className="text-left px-4 py-2 whitespace-nowrap">Inicio</th>
-                    <th className="text-right px-4 py-2 whitespace-nowrap">Cuota</th>
-                    <th className="text-right px-4 py-2 whitespace-nowrap">Extras</th>
-                    <th className="text-right px-4 py-2 whitespace-nowrap">Acciones</th>
+                    <th className={th}>Título</th>
+                    <th className={th}>Inicio</th>
+                    <th className={`${th} text-right`}>Cuota</th>
+                    <th className={`${th} text-right`}>Extras</th>
+                    <th className={`${th} text-right`}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -258,24 +253,24 @@ function startOfMonth(d = new Date()) {
                     </tr>
                     ) : (
                     loans.map((l: any) => (
-                        <tr key={l.id} className="border-t hover:bg-white transition">
-                        <td className="px-4 py-2 whitespace-nowrap">{l.title}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">
+                        <tr key={l.id} className={tr}>
+                        <td className={td}>{l.title}</td>
+                        <td className={td}>
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <td className={`${td} text-right`}>
                             {Number(l.monthlyPayment).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <td className={`${td} text-right`}>
                             {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <td className={`${td} text-right`}>
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
@@ -316,7 +311,6 @@ function startOfMonth(d = new Date()) {
     money?: boolean;
     accent?: boolean;
     subtitle?: string;
-    /** porcentaje 0–100 para mostrar barra de progreso opcional */
     progress?: number;
     }) {
     const pct = Math.max(0, Math.min(100, progress ?? 0));
