@@ -1,4 +1,3 @@
-// src/app/auth/register/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -22,8 +21,8 @@ export default function RegisterPage() {
         });
 
         if (!res.ok) {
-            const data = await res.json().catch(() => ({} as unknown));
-            alert((data as { error?: string })?.error ?? "No se pudo crear la cuenta");
+            const data = await res.json().catch(() => ({}));
+            alert(data?.error ?? "No se pudo crear la cuenta");
             return;
         }
 
@@ -44,7 +43,7 @@ export default function RegisterPage() {
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 mb-2">
                 <Image
                 src="/logo.png"
-                alt="Logo novabank"
+                alt="Logo Nova Bank"
                 fill
                 className="object-contain"
                 priority

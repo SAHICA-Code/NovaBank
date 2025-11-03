@@ -6,28 +6,21 @@ import { prisma } from "@/lib/prisma";
 
 type Params = { loanId: string };
 
-// GET: lista las cuotas del préstamo del usuario
-export async function GET(
-    _req: NextRequest,
-    context: { params: Promise<Params> }
-    ) {
+// GET: cuotas de un préstamo del panel cliente
+export async function GET(_req: NextRequest, ctx: { params: Promise<Params> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const { loanId } = await context.params;
+        const { loanId } = await ctx.params;
 
         // Validar que el préstamo pertenece al usuario
         const loan = await prisma.clientLoan.findFirst({
-        where: {
-            id: loanId,
-            userId: session.user.id,
-        },
+        where: { id: loanId, userId: session.user.id },
         select: { id: true },
         });
-
         if (!loan) {
         return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
         }
@@ -52,53 +45,49 @@ export async function GET(
     }
     }
 
-    // PATCH: marca una cuota como pagada (tu enum solo tiene PENDING/PAID)
-    export async function PATCH(
-    req: NextRequest
-    ) {
+    // PATCH: marcar pagada una cuota (o parcial -> aquí solo PENDING/PAID según tu schema)
+    export async function PATCH(req: NextRequest, ctx: { params: Promise<Params> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = (await req.json()) as {
-        installmentId?: string;
-        action?: "markPaid";
-        };
+        const { loanId } = await ctx.params;
 
-        const installmentId = body?.installmentId ?? "";
-        const action = body?.action ?? "";
+        type Body = { installmentId?: string; action?: "markPaid" };
+        const body: Body = await req.json().catch(() => ({} as Body));
 
-        if (!installmentId || action !== "markPaid") {
-        return NextResponse.json(
-            { error: "Faltan campos o acción no soportada" },
-            { status: 400 }
-        );
+        if (!body.installmentId || !body.action) {
+        return NextResponse.json({ error: "Faltan campos: installmentId, action" }, { status: 400 });
         }
 
-        // Verificar pertenencia: la cuota debe ser de un préstamo del usuario
+        // Verificar pertenencia del installment
         const inst = await prisma.clientInstallment.findUnique({
-        where: { id: installmentId },
+        where: { id: body.installmentId },
         select: {
             id: true,
+            loanId: true,
             loan: { select: { userId: true } },
         },
         });
 
-        if (!inst || inst.loan.userId !== session.user.id) {
+        if (!inst || inst.loan.userId !== session.user.id || inst.loanId !== loanId) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
         }
 
+        if (body.action === "markPaid") {
         await prisma.clientInstallment.update({
-        where: { id: installmentId },
-        data: {
+            where: { id: body.installmentId },
+            data: {
             status: "PAID",
             paidAt: new Date(),
-        },
+            },
         });
-
         return NextResponse.json({ ok: true });
+        }
+
+        return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
     } catch (e) {
         console.error("PATCH /api/client/loans/[loanId]/installments error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });

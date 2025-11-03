@@ -1,4 +1,3 @@
-// src/app/dashboard/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -69,18 +68,12 @@ function startOfYear(d = new Date()) {
     const totalToCollect = toNum(financeAgg._sum.totalToRepay);
     const profitProjected = totalToCollect - invested;
 
-    // Tipado explícito en los map para evitar "implicit any"
-    const pendingTotal = sum(
-        pendingPayments.map((p: { amount: unknown }) => Number(p.amount ?? 0))
-    );
-    const collectedTotal = sum(
-        paidPayments.map((p: { amount: unknown }) => Number(p.amount ?? 0))
-    );
+    const pendingTotal = sum(pendingPayments.map((p) => toNum(p.amount)));
+    const collectedTotal = sum(paidPayments.map((p) => toNum(p.amount)));
 
     const recoveredCapital = Math.min(collectedTotal, invested);
     const realizedProfit = Math.max(collectedTotal - invested, 0);
     const capitalToRecover = Math.max(invested - recoveredCapital, 0);
-    const profitRemaining = Math.max(profitProjected - realizedProfit, 0); // puede que no lo uses en UI ahora
     const breakEven = capitalToRecover === 0;
 
     return (
