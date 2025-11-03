@@ -178,48 +178,38 @@ function startOfMonth(d = new Date()) {
                 style={{ WebkitOverflowScrolling: "touch" as any }}
             >
                 <table className={tableBase}>
+                {/* CUOTAS DEL MES (alineadas simétricamente) */}
                 <thead className={thead}>
-                    <tr>
-                    <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">Préstamo</th>
-                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">Importe</th>
-                    <th className={th}>Fecha</th>
-                    <th className={th}>Estado</th>
-                    </tr>
+                <tr>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Préstamo</th>
+                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Importe</th>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Fecha</th>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Estado</th>
+                </tr>
                 </thead>
                 <tbody>
-                    {installmentsThisMonth.length === 0 ? (
-                    <tr>
-                        <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                        No hay cuotas este mes.
-                        </td>
+                {installmentsThisMonth.map((i: any) => (
+                    <tr key={i.id} className={tr}>
+                    <td className="px-4 py-3 align-middle whitespace-nowrap">{i.title ?? "—"}</td>
+                    <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                        {Number(i.amount ?? 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+                    </td>
+                    <td className="px-4 py-3 align-middle whitespace-nowrap">
+                        {new Date(i.dueDate).toLocaleDateString("es-ES")}
+                    </td>
+                    <td className="px-4 py-3 align-middle whitespace-nowrap">
+                        {i.status === "PAID" ? (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
+                            Pagada
+                        </span>
+                        ) : (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-200">
+                            Pendiente
+                        </span>
+                        )}
+                    </td>
                     </tr>
-                    ) : (
-                    installmentsThisMonth.map((i: any) => (
-                        <tr key={i.id} className={tr}>
-                        <td className="px-2.5 py-3 align-middle whitespace-nowrap">{i.title ?? "—"}</td>
-                        <td className="px-2.5 py-3 align-middle whitespace-nowrap text-right">
-                            {Number(i.amount ?? 0).toLocaleString("es-ES", {
-                            style: "currency",
-                            currency: "EUR",
-                            })}
-                        </td>
-                        <td className={td}>
-                            {new Date(i.dueDate).toLocaleDateString("es-ES")}
-                        </td>
-                        <td className={td}>
-                            {i.status === "PAID" ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
-                                Pagada
-                            </span>
-                            ) : (
-                            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-200">
-                                Pendiente
-                            </span>
-                            )}
-                        </td>
-                        </tr>
-                    ))
-                    )}
+                ))}
                 </tbody>
                 </table>
             </div>
@@ -244,40 +234,27 @@ function startOfMonth(d = new Date()) {
                 <table className={tableBase}>
                 <thead className={thead}>
                     <tr>
-                    <th className={th}>Título</th>
-                    <th className={`${th} text-right`}>Cuota</th>
-                    <th className={th}>Inicio</th>
-                    <th className={`${th} text-right`}>Extras</th>
-                    <th className={`${th} text-right`}>Acciones</th>
+                        <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Título</th>
+                        <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Cuota</th>
+                        <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Inicio</th>
+                        <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Extras</th>
+                        <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Acciones</th>
                     </tr>
-                </thead>
-                <tbody>
-                    {loans.length === 0 ? (
-                    <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                        Aún no has añadido préstamos.
-                        </td>
-                    </tr>
-                    ) : (
-                    loans.map((l: any) => (
+                    </thead>
+                    <tbody>
+                    {loans.map((l: any) => (
                         <tr key={l.id} className={tr}>
-                        <td className={td}>{l.title}</td>
-                        <td className={`${td} text-right`}>
-                            {Number(l.monthlyPayment).toLocaleString("es-ES", {
-                            style: "currency",
-                            currency: "EUR",
-                            })}
+                        <td className="px-4 py-3 align-middle whitespace-nowrap">{l.title}</td>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                            {Number(l.monthlyPayment).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
                         </td>
-                        <td className={td}>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap">
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={`${td} text-right`}>
-                            {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
-                            style: "currency",
-                            currency: "EUR",
-                            })}
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
+                            {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
                         </td>
-                        <td className={`${td} text-right`}>
+                        <td className="px-4 py-3 align-middle whitespace-nowrap text-right">
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
@@ -286,9 +263,8 @@ function startOfMonth(d = new Date()) {
                             </Link>
                         </td>
                         </tr>
-                    ))
-                    )}
-                </tbody>
+                    ))}
+                    </tbody>
                 </table>
             </div>
             </section>
