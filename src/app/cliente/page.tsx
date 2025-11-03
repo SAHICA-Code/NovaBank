@@ -252,7 +252,7 @@ function startOfMonth(d = new Date()) {
                     <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
                         Extras
                     </th>
-                    <th className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                    <th className="px-8 py-3 text-right font-medium whitespace-nowrap">
                         Acciones
                     </th>
                     </tr>
