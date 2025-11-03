@@ -29,7 +29,6 @@ function startOfMonth(d = new Date()) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) redirect("/auth/login");
 
-    // Exigir perfil cliente: si no lo tiene, al onboarding
     const profile = await prisma.clientProfile.findUnique({
         where: { userId: session.user.id },
         select: { id: true },
@@ -46,10 +45,7 @@ function startOfMonth(d = new Date()) {
         orderBy: { createdAt: "desc" },
         }),
         prisma.clientInstallment.findMany({
-        where: {
-            userId: session.user.id,
-            dueDate: { gte: from, lte: to },
-        },
+        where: { userId: session.user.id, dueDate: { gte: from, lte: to } },
         orderBy: { dueDate: "asc" },
         }),
         prisma.clientInstallment.findMany({
@@ -79,15 +75,15 @@ function startOfMonth(d = new Date()) {
 
     const progresoMes = totalMes > 0 ? (totalPagadoMes / totalMes) * 100 : 0;
 
-    // === clases de tabla (look “limpio”) ===
+    // Estilos de tabla (look limpio + scroll horizontal)
     const tableWrap =
-        "rounded-2xl border border-black/5 bg-white/80 backdrop-blur";
-    const tableBase = "w-full text-sm text-gray-800";
+        "rounded-2xl border border-black/5 bg-white/80 backdrop-blur overflow-x-auto";
+    const tableBase = "w-full min-w-[720px] text-sm text-gray-800";
     const thead =
         "bg-gray-50/80 text-gray-600 sticky top-0 z-0 border-b border-gray-200";
-    const th = "px-4 py-3 text-left font-medium";
+    const th = "px-4 py-3 text-left font-medium whitespace-nowrap";
     const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
-    const td = "px-4 py-3 align-middle";
+    const td = "px-4 py-3 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
@@ -117,7 +113,9 @@ function startOfMonth(d = new Date()) {
 
             {/* Usuario */}
             <div className="text-center md:text-right px-1">
-                <p className="text-[11px] sm:text-xs text-gray-500">Sesión iniciada como</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">
+                Sesión iniciada como
+                </p>
                 <UserMenu email={session.user?.email ?? ""} />
             </div>
 
@@ -171,20 +169,21 @@ function startOfMonth(d = new Date()) {
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
 
-            {/* CUOTAS DEL MES (Préstamo + Importe primero / sin scroll en móvil) */}
+            {/* CUOTAS DEL MES (orden nuevo: Préstamo → Importe → Fecha → Estado) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
 
-            <div className={`${tableWrap} overflow-x-auto sm:overflow-x-visible`} style={{ WebkitOverflowScrolling: "touch" as any }}>
+            <div
+                className={tableWrap}
+                style={{ WebkitOverflowScrolling: "touch" as any }}
+            >
                 <table className={tableBase}>
                 <thead className={thead}>
                     <tr>
-                    {/* Orden nuevo: Préstamo + Importe siempre los primeros */}
                     <th className={th}>Préstamo</th>
                     <th className={`${th} text-right`}>Importe</th>
-                    {/* En móvil ocultamos el resto */}
-                    <th className={`${th} hidden sm:table-cell`}>Fecha</th>
-                    <th className={`${th} hidden sm:table-cell`}>Estado</th>
+                    <th className={th}>Fecha</th>
+                    <th className={th}>Estado</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -204,10 +203,10 @@ function startOfMonth(d = new Date()) {
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={`${td} hidden sm:table-cell`}>
+                        <td className={td}>
                             {new Date(i.dueDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={`${td} hidden sm:table-cell`}>
+                        <td className={td}>
                             {i.status === "PAID" ? (
                             <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">
                                 Pagada
@@ -226,7 +225,7 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* TUS PRÉSTAMOS (Título + Cuota primero / sin scroll en móvil) */}
+            {/* TUS PRÉSTAMOS (orden nuevo: Título → Cuota → Inicio → Extras → Acciones) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Tus préstamos</h3>
@@ -238,17 +237,18 @@ function startOfMonth(d = new Date()) {
                 </Link>
             </div>
 
-            <div className={`${tableWrap} overflow-x-auto sm:overflow-x-visible`} style={{ WebkitOverflowScrolling: "touch" as any }}>
+            <div
+                className={tableWrap}
+                style={{ WebkitOverflowScrolling: "touch" as any }}
+            >
                 <table className={tableBase}>
                 <thead className={thead}>
                     <tr>
-                    {/* Orden nuevo: Título + Cuota primero */}
                     <th className={th}>Título</th>
                     <th className={`${th} text-right`}>Cuota</th>
-                    {/* resto oculto en móvil */}
-                    <th className={`${th} hidden sm:table-cell`}>Inicio</th>
-                    <th className={`${th} hidden sm:table-cell text-right`}>Extras</th>
-                    <th className={`${th} hidden sm:table-cell text-right`}>Acciones</th>
+                    <th className={th}>Inicio</th>
+                    <th className={`${th} text-right`}>Extras</th>
+                    <th className={`${th} text-right`}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -268,16 +268,16 @@ function startOfMonth(d = new Date()) {
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={`${td} hidden sm:table-cell`}>
+                        <td className={td}>
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={`${td} hidden sm:table-cell text-right`}>
+                        <td className={`${td} text-right`}>
                             {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={`${td} hidden sm:table-cell text-right`}>
+                        <td className={`${td} text-right`}>
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
@@ -318,7 +318,6 @@ function startOfMonth(d = new Date()) {
     money?: boolean;
     accent?: boolean;
     subtitle?: string;
-    /** porcentaje 0–100 para mostrar barra de progreso opcional */
     progress?: number;
     }) {
     const pct = Math.max(0, Math.min(100, progress ?? 0));
