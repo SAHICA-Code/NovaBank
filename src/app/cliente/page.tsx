@@ -54,6 +54,7 @@ function startOfMonth(d = new Date()) {
         }),
     ]);
 
+    // Totales del mes
     const totalMes: number = installmentsThisMonth.reduce(
         (acc: number, i: { amount: any }) => acc + Number(i.amount ?? 0),
         0
@@ -74,23 +75,15 @@ function startOfMonth(d = new Date()) {
 
     const progresoMes = totalMes > 0 ? (totalPagadoMes / totalMes) * 100 : 0;
 
-    // Estilos base simétricos
+    // Estilos de tabla (look limpio + scroll horizontal)
     const tableWrap =
         "rounded-2xl border border-black/5 bg-white/80 backdrop-blur overflow-x-auto";
-    const tableBase =
-        "w-full min-w-[780px] table-fixed text-sm text-gray-800";
+    const tableBase = "w-full min-w-[720px] text-sm text-gray-800";
     const thead =
         "bg-gray-50/80 text-gray-600 sticky top-0 z-0 border-b border-gray-200";
-    const th =
-        "px-5 py-3 text-left font-medium whitespace-nowrap text-gray-600";
-    const thRight =
-        "px-5 py-3 text-right font-medium whitespace-nowrap text-gray-600";
-    const tr =
-        "border-b border-gray-200 last:border-0 hover:bg-gray-50/60 transition-colors";
-    const td =
-        "px-5 py-3 align-middle whitespace-nowrap text-gray-800";
-    const tdRight =
-        "px-5 py-3 align-middle whitespace-nowrap text-right text-gray-800";
+    const th = "px-4 py-3 text-left font-medium whitespace-nowrap";
+    const tr = "border-b border-gray-200 last:border-0 hover:bg-gray-50/60";
+    const td = "px-4 py-3 align-middle whitespace-nowrap";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-rose-50 to-emerald-50">
@@ -176,22 +169,19 @@ function startOfMonth(d = new Date()) {
             <MetricCard title="Pendiente total" value={totalPendienteGlobal} money accent />
             </div>
 
-            {/* CUOTAS DEL MES */}
+            {/* CUOTAS DEL MES (orden nuevo: Préstamo → Importe → Fecha → Estado) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Cuotas de este mes</h3>
 
-            <div className={tableWrap}>
+            <div
+                className={tableWrap}
+                style={{ WebkitOverflowScrolling: "touch" as any }}
+            >
                 <table className={tableBase}>
-                <colgroup>
-                    <col style={{ width: "40%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "22%" }} />
-                    <col style={{ width: "20%" }} />
-                </colgroup>
                 <thead className={thead}>
                     <tr>
-                    <th className={th}>Préstamo</th>
-                    <th className={thRight}>Importe</th>
+                    <th className="px-2.5 py-3 text-left font-medium whitespace-nowrap">Préstamo</th>
+                    <th className="px-2.5 py-3 text-right font-medium whitespace-nowrap">Importe</th>
                     <th className={th}>Fecha</th>
                     <th className={th}>Estado</th>
                     </tr>
@@ -206,8 +196,8 @@ function startOfMonth(d = new Date()) {
                     ) : (
                     installmentsThisMonth.map((i: any) => (
                         <tr key={i.id} className={tr}>
-                        <td className={td}>{i.title ?? "—"}</td>
-                        <td className={tdRight}>
+                        <td className="px-2.5 py-3 align-middle whitespace-nowrap">{i.title ?? "—"}</td>
+                        <td className="px-2.5 py-3 align-middle whitespace-nowrap text-right">
                             {Number(i.amount ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
@@ -235,7 +225,7 @@ function startOfMonth(d = new Date()) {
             </div>
             </section>
 
-            {/* TUS PRÉSTAMOS */}
+            {/* TUS PRÉSTAMOS (orden nuevo: Título → Cuota → Inicio → Extras → Acciones) */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Tus préstamos</h3>
@@ -247,22 +237,18 @@ function startOfMonth(d = new Date()) {
                 </Link>
             </div>
 
-            <div className={tableWrap}>
+            <div
+                className={tableWrap}
+                style={{ WebkitOverflowScrolling: "touch" as any }}
+            >
                 <table className={tableBase}>
-                <colgroup>
-                    <col style={{ width: "40%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "22%" }} />
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "8%" }} />
-                </colgroup>
                 <thead className={thead}>
                     <tr>
                     <th className={th}>Título</th>
-                    <th className={thRight}>Cuota</th>
+                    <th className={`${th} text-right`}>Cuota</th>
                     <th className={th}>Inicio</th>
-                    <th className={thRight}>Extras</th>
-                    <th className={thRight}>Acciones</th>
+                    <th className={`${th} text-right`}>Extras</th>
+                    <th className={`${th} text-right`}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -276,7 +262,7 @@ function startOfMonth(d = new Date()) {
                     loans.map((l: any) => (
                         <tr key={l.id} className={tr}>
                         <td className={td}>{l.title}</td>
-                        <td className={tdRight}>
+                        <td className={`${td} text-right`}>
                             {Number(l.monthlyPayment).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
@@ -285,13 +271,13 @@ function startOfMonth(d = new Date()) {
                         <td className={td}>
                             {new Date(l.startDate).toLocaleDateString("es-ES")}
                         </td>
-                        <td className={tdRight}>
+                        <td className={`${td} text-right`}>
                             {Number(l.monthlyExtras ?? 0).toLocaleString("es-ES", {
                             style: "currency",
                             currency: "EUR",
                             })}
                         </td>
-                        <td className={tdRight}>
+                        <td className={`${td} text-right`}>
                             <Link
                             href={`/cliente/prestamos/${l.id}`}
                             className="inline-flex items-center rounded-xl bg-gray-800/90 text-white px-3 py-1.5 text-xs font-medium shadow-sm hover:brightness-110"
