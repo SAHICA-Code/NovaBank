@@ -1,11 +1,12 @@
+// src/app/auth/login/page.tsx
 "use client";
 
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function LoginPage() {
+function LoginInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const error = searchParams.get("error"); // CredentialsSignin, OAuthSignin, etc.
@@ -90,9 +91,7 @@ export default function LoginPage() {
                 {error === "CredentialsSignin" && (
                 <button
                     onClick={() => {
-                    const q = email
-                        ? `?email=${encodeURIComponent(email)}`
-                        : "";
+                    const q = email ? `?email=${encodeURIComponent(email)}` : "";
                     router.push(`/auth/register${q}`);
                     }}
                     className="font-medium underline underline-offset-2 hover:text-rose-800 ml-1"
@@ -141,9 +140,7 @@ export default function LoginPage() {
             disabled={loadingGoogle || loadingCreds}
             className="w-full mt-3 border border-gray-300 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition disabled:opacity-60"
             >
-            {loadingGoogle
-                ? "Conectando con Google..."
-                : "Continuar con Google"}
+            {loadingGoogle ? "Conectando con Google..." : "Continuar con Google"}
             </button>
 
             <p className="mt-4 text-sm text-gray-600">
@@ -164,5 +161,13 @@ export default function LoginPage() {
             </p>
         </div>
         </div>
+    );
+    }
+
+    export default function LoginPage() {
+    return (
+        <Suspense fallback={null}>
+        <LoginInner />
+        </Suspense>
     );
 }
