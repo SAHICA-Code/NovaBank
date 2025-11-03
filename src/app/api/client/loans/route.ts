@@ -1,11 +1,12 @@
 // src/app/api/client/loans/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { addMonths } from "date-fns";
-import { AmortizationMode, LoanType, InstallmentStatus } from "@prisma/client";
+import { ClientLoanType, ClientInstallmentStatus } from "@prisma/client";
 
+/** LISTAR PRÉSTAMOS DEL CLIENTE ACTUAL */
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
@@ -13,115 +14,143 @@ export async function GET() {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
+        // Buscar el perfil del cliente del usuario
         const profile = await prisma.clientProfile.findUnique({
         where: { userId: session.user.id },
         select: { id: true },
         });
+
         if (!profile) {
-        return NextResponse.json({ loans: [] }, { status: 200 });
+        // Si no hay perfil aún, devolver lista vacía
+        return NextResponse.json({ loans: [] });
         }
 
-        const loans = await prisma.personalLoan.findMany({
-        where: { clientId: profile.id },
-        orderBy: { createdAt: "desc" },
+        const loans = await prisma.clientLoan.findMany({
+        where: { userId: session.user.id, profileId: profile.id },
+        orderBy: { startDate: "desc" },
         select: {
             id: true,
             title: true,
             type: true,
-            mode: true,
-            months: true,
             startDate: true,
+            months: true,
             monthlyPayment: true,
             monthlyExtras: true,
+            finishedAt: true,
             createdAt: true,
-            _count: { select: { installments: true } },
+            updatedAt: true,
         },
         });
 
         return NextResponse.json({ loans });
-    } catch (e: any) {
+    } catch (e) {
         console.error("GET /api/client/loans error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
     }
 
-    export async function POST(req: Request) {
+    type PostBody = {
+    title: string;
+    type?: ClientLoanType; // por defecto OTHER si no viene
+    startDate: string; // ISO
+    months: number;
+    monthlyPayment: number;
+    monthlyExtras?: number | null;
+    };
+
+    /** CREAR PRÉSTAMO + GENERAR CUOTAS */
+    export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const profile = await prisma.clientProfile.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-        });
-        if (!profile) {
-        return NextResponse.json({ error: "No existe perfil de cliente" }, { status: 400 });
+        const body = (await req.json().catch(() => null)) as PostBody | null;
+        if (!body) {
+        return NextResponse.json({ error: "Body inválido" }, { status: 400 });
         }
 
-        const body = await req.json().catch(() => ({}));
-        const {
-        title,
-        type = "OTHER",
-        startDate,
-        months,
-        monthlyPayment,
-        monthlyExtras = 0,
-        }: {
-        title?: string;
-        type?: LoanType;
-        startDate?: string;
-        months?: number;
-        monthlyPayment?: number;
-        monthlyExtras?: number;
-        } = body;
+        const { title, type, startDate, months, monthlyPayment, monthlyExtras } = body;
 
-        if (!title || !months || !monthlyPayment) {
+        if (!title || !startDate || !months || !monthlyPayment) {
         return NextResponse.json(
-            { error: "Faltan campos obligatorios: title, months, monthlyPayment" },
+            { error: "Faltan campos obligatorios: title, startDate, months, monthlyPayment" },
             { status: 400 }
         );
         }
 
-        const start = startDate ? new Date(startDate) : new Date();
+        const sd = new Date(startDate);
+        if (Number.isNaN(sd.getTime())) {
+        return NextResponse.json({ error: "startDate inválida" }, { status: 400 });
+        }
+        if (!Number.isFinite(months) || months <= 0) {
+        return NextResponse.json({ error: "months debe ser > 0" }, { status: 400 });
+        }
+        if (!Number.isFinite(monthlyPayment) || monthlyPayment <= 0) {
+        return NextResponse.json({ error: "monthlyPayment debe ser > 0" }, { status: 400 });
+        }
+        const extras = monthlyExtras ?? null;
+        if (extras !== null && (!Number.isFinite(extras) || extras < 0)) {
+        return NextResponse.json({ error: "monthlyExtras debe ser >= 0" }, { status: 400 });
+        }
 
-        const created = await prisma.$transaction(async (tx) => {
-        const loan = await tx.personalLoan.create({
+        // Asegurar perfil del cliente
+        let profile = await prisma.clientProfile.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+        });
+
+        if (!profile) {
+        profile = await prisma.clientProfile.create({
             data: {
-            clientId: profile.id,
-            title,
-            type,
-            mode: AmortizationMode.FIXED_PAYMENT_MANUAL,
-            months,
-            startDate: start,
-            monthlyPayment,
-            monthlyExtras: monthlyExtras || null,
+            userId: session.user.id,
             },
             select: { id: true },
         });
+        }
 
-        const rows = Array.from({ length: months }).map((_, i) => {
-            const dueDate = addMonths(start, i);
-            const amount = (monthlyPayment || 0) + (monthlyExtras || 0);
-            return {
+        // Crear el préstamo
+        const loan = await prisma.clientLoan.create({
+        data: {
+            userId: session.user.id,
+            profileId: profile.id,
+            title: title.trim(),
+            type: type ?? ClientLoanType.OTHER,
+            startDate: sd,
+            months,
+            monthlyPayment,
+            monthlyExtras: extras,
+        },
+        select: { id: true, profileId: true, userId: true, startDate: true },
+        });
+
+        // Generar cuotas (amount = monthlyPayment + monthlyExtras)
+        const installmentsData = Array.from({ length: months }).map((_, i) => {
+        const due = addMonths(loan.startDate, i);
+        const base = Number(monthlyPayment);
+        const extra = extras ? Number(extras) : 0;
+        const total = base + extra;
+
+        return {
             loanId: loan.id,
-            dueDate,
-            amount,
-            principal: null,
-            interest: null,
-            extras: monthlyExtras || null,
-            status: InstallmentStatus.PENDING,
-            };
+            userId: loan.userId,
+            profileId: loan.profileId,
+            title: `Cuota ${i + 1}`,
+            dueDate: due,
+            amount: total,
+            status: ClientInstallmentStatus.PENDING,
+        };
         });
 
-        await tx.personalInstallment.createMany({ data: rows });
-
-        return loan;
+        if (installmentsData.length > 0) {
+        await prisma.clientInstallment.createMany({
+            data: installmentsData,
         });
+        }
 
-        return NextResponse.json({ ok: true, loanId: created.id }, { status: 201 });
-    } catch (e: any) {
+        return NextResponse.json({ ok: true, loanId: loan.id });
+    } catch (e) {
         console.error("POST /api/client/loans error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
