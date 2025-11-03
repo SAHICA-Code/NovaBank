@@ -1,16 +1,24 @@
 // src/app/api/client/loans/[loanId]/installments/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { InstallmentStatus } from "@prisma/client";
 
-type RouteParams = {
-    params: { loanId: string };
+type RouteContext = {
+    params: Promise<{ loanId: string }>;
     };
 
-    export async function GET(_: Request, { params }: RouteParams) {
+    type PatchBody = {
+    installmentId: string;
+    action: "markPaid" | "markPartial";
+    actualPaid?: number;
+    };
+
+    export async function GET(_req: NextRequest, context: RouteContext) {
     try {
+        const { loanId } = await context.params;
+
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
@@ -19,7 +27,7 @@ type RouteParams = {
         // Validar que el préstamo pertenece al usuario
         const loan = await prisma.personalLoan.findFirst({
         where: {
-            id: params.loanId,
+            id: loanId,
             client: { userId: session.user.id },
         },
         select: { id: true },
@@ -45,22 +53,33 @@ type RouteParams = {
         });
 
         return NextResponse.json({ installments });
-    } catch (e: any) {
+    } catch (e) {
         console.error("GET /api/client/loans/[loanId]/installments error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
     }
 
-    export async function PATCH(req: Request, { params }: RouteParams) {
+    export async function PATCH(req: NextRequest, context: RouteContext) {
     try {
+        // Aunque no lo uses ahora, mantener la lectura de params asegura consistencia de tipos
+        await context.params;
+
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
         return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const { installmentId, action, actualPaid } = await req.json().catch(() => ({} as any));
+        const body = (await req.json().catch(() => null)) as PatchBody | null;
+        if (!body) {
+        return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+        }
+
+        const { installmentId, action, actualPaid } = body;
         if (!installmentId || !action) {
-        return NextResponse.json({ error: "Faltan campos: installmentId, action" }, { status: 400 });
+        return NextResponse.json(
+            { error: "Faltan campos: installmentId, action" },
+            { status: 400 }
+        );
         }
 
         // Verificar pertenencia (el installment debe ser de un loan del usuario)
@@ -91,8 +110,11 @@ type RouteParams = {
 
         if (action === "markPartial") {
         const paid = Number(actualPaid);
-        if (!paid || paid <= 0) {
-            return NextResponse.json({ error: "actualPaid debe ser > 0" }, { status: 400 });
+        if (!Number.isFinite(paid) || paid <= 0) {
+            return NextResponse.json(
+            { error: "actualPaid debe ser un número > 0" },
+            { status: 400 }
+            );
         }
         await prisma.personalInstallment.update({
             where: { id: installmentId },
@@ -106,7 +128,7 @@ type RouteParams = {
         }
 
         return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
-    } catch (e: any) {
+    } catch (e) {
         console.error("PATCH /api/client/loans/[loanId]/installments error:", e);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
