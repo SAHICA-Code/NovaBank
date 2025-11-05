@@ -76,7 +76,9 @@ export default async function Home() {
             </Link>
           </div>
         )}
-
+        <p className="mt-5 text-[11px] text-gray-400">
+          Cuenta de demostración demo@demo.com - demo123
+        </p>
         <p className="mt-5 text-[11px] text-gray-400">
           © {new Date().getFullYear()} Nova Bank — Web creada por Sara Hidalgo Caro
         </p>
