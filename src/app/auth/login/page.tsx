@@ -143,6 +143,9 @@ function LoginInner() {
             {loadingGoogle ? "Conectando con Google..." : "Continuar con Google"}
             </button>
 
+            <p className="mt-5 text-[11px] text-gray-400">
+                Cuenta de prueba demo@demo.com - demo123
+            </p>
             <p className="mt-4 text-sm text-gray-600">
             ¿No tienes cuenta?{" "}
             <a
