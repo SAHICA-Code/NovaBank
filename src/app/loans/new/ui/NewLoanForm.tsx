@@ -5,21 +5,72 @@ import { useMemo, useState, useEffect } from "react";
 
 type ClientOpt = { id: string; name: string };
 
-export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
-    const [clientId, setClientId] = useState(clients[0]?.id ?? "");
-    const [amount, setAmount] = useState<string>("");
+type Mode = "create" | "edit";
 
-    const [months, setMonths] = useState<string>(""); // meses totales (decimales)
-    const [monthsTouched, setMonthsTouched] = useState(false);
+type InitialLoan = {
+    id: string;
+    clientId: string;
+    amount: number;
+    months: number;
+    startDate: string;        // "YYYY-MM-DD"
+    endDate?: string;         // "YYYY-MM-DD" o ""
+    markupPercent: number;    // % que ya tiene el préstamo
+    };
+
+    type Props = {
+    clients: ClientOpt[];
+    mode?: Mode;              // por defecto "create"
+    initialLoan?: InitialLoan;
+    };
+
+    export default function NewLoanForm({
+    clients,
+    mode = "create",
+    initialLoan,
+    }: Props) {
+    const isEdit = mode === "edit";
+
+    const [clientId, setClientId] = useState(
+        initialLoan?.clientId ?? clients[0]?.id ?? ""
+    );
+    const [amount, setAmount] = useState<string>(
+        initialLoan ? String(initialLoan.amount) : ""
+    );
+
+    const [months, setMonths] = useState<string>(
+        initialLoan ? String(initialLoan.months) : ""
+    );
+    const [monthsTouched, setMonthsTouched] = useState<boolean>(!!initialLoan);
 
     const [startDate, setStartDate] = useState<string>(
-        new Date().toISOString().slice(0, 10)
+        initialLoan?.startDate ?? new Date().toISOString().slice(0, 10)
     );
-    const [endDate, setEndDate] = useState<string>(""); // fecha final opcional
+    const [endDate, setEndDate] = useState<string>(initialLoan?.endDate ?? "");
 
     const [daysBetween, setDaysBetween] = useState<number>(0);
 
-    const [markupFactor, setMarkupFactor] = useState<string>("1.5"); // días × factor
+    // markupFactor inicial: si estamos editando e inicialLoan trae % y fechas,
+    // intentamos reconstruir el factor = markupPercent / días
+    const [markupFactor, setMarkupFactor] = useState<string>(() => {
+        if (
+        initialLoan &&
+        initialLoan.startDate &&
+        initialLoan.endDate
+        ) {
+        const start = new Date(initialLoan.startDate);
+        const end = new Date(initialLoan.endDate);
+        const diffMs = end.getTime() - start.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+            const f = initialLoan.markupPercent / diffDays;
+            if (Number.isFinite(f) && f > 0) {
+            return f.toFixed(2).replace(/\.?0+$/, "");
+            }
+        }
+        }
+        return "1.5";
+    });
+
     const [loading, setLoading] = useState(false);
 
     // ---- helpers de formato
@@ -42,7 +93,11 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
 
     // ---- cálculo días + meses automáticos a partir de fechas
 
-    function recomputeFromDates(nextStart: string, nextEnd: string, monthsTouchedFlag: boolean) {
+    function recomputeFromDates(
+        nextStart: string,
+        nextEnd: string,
+        monthsTouchedFlag: boolean
+    ) {
         if (!nextStart || !nextEnd) {
         setDaysBetween(0);
         return;
@@ -60,12 +115,12 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
         setDaysBetween(diffDays);
 
-        // Si el usuario NO ha tocado los meses, los calculamos como días/30 en decimales
+        // Si el usuario NO ha tocado los meses, los calculamos como días/30
         if (!monthsTouchedFlag) {
         const monthsDec = diffDays / 30;
         const str = monthsDec
-            .toFixed(2) // 0.50
-            .replace(/\.?0+$/, ""); // -> 0.5
+            .toFixed(2)
+            .replace(/\.?0+$/, "");
         setMonths(str);
         }
     }
@@ -82,13 +137,12 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
         const m = Number(months);
         if (!Number.isFinite(m) || m <= 0) return;
 
-        const daysFromMonths = Math.round(m * 30); // aproximación
+        const daysFromMonths = Math.round(m * 30);
         const start = new Date(startDate);
         const end = new Date(start);
         end.setDate(start.getDate() + daysFromMonths);
 
         const newEndISO = end.toISOString().slice(0, 10);
-        // Solo actualizamos si realmente cambia para evitar bucles tontos
         if (newEndISO !== endDate) {
         setEndDate(newEndISO);
         }
@@ -126,7 +180,6 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
         );
         if (p < 0) return alert("El % de recargo no puede ser negativo");
 
-        // Validar fechas si hay final
         if (endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -137,8 +190,15 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
 
         setLoading(true);
         try {
-        const res = await fetch("/api/loans", {
-            method: "POST",
+        const url =
+            isEdit && initialLoan
+            ? `/api/loans/${initialLoan.id}`
+            : "/api/loans";
+
+        const method = isEdit && initialLoan ? "PUT" : "POST";
+
+        const res = await fetch(url, {
+            method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
             clientId,
@@ -146,13 +206,15 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
             months: m,
             markupPercent: p,
             startDate,
+            endDate: endDate || null,
             }),
         });
+
         if (res.ok) {
             window.location.href = "/payments";
         } else {
             const data = await res.json().catch(() => ({}));
-            alert(data?.error ?? "No se pudo crear el préstamo");
+            alert(data?.error ?? "No se pudo guardar el préstamo");
         }
         } finally {
         setLoading(false);
@@ -188,8 +250,6 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
                 value={startDate}
                 onChange={(e) => {
                 setStartDate(e.target.value);
-                // si cambias la fecha de inicio y los meses los has escrito tú,
-                // actualizaremos fecha final en el useEffect de monthsTouched
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
             />
@@ -204,7 +264,6 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
                 value={endDate}
                 onChange={(e) => {
                 setEndDate(e.target.value);
-                // como el usuario está tocando fecha, consideramos que NO ha fijado meses manualmente
                 setMonthsTouched(false);
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
@@ -315,8 +374,14 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
             disabled={loading}
             className="rounded-xl bg-indigo-600 text-white px-5 py-2.5 font-medium shadow-sm hover:bg-indigo-700 disabled:opacity-60"
         >
-            {loading ? "Creando..." : "Crear préstamo"}
+            {loading
+            ? isEdit
+                ? "Guardando..."
+                : "Creando..."
+            : isEdit
+            ? "Guardar cambios"
+            : "Crear préstamo"}
         </button>
         </form>
-    );
+  );
 }
