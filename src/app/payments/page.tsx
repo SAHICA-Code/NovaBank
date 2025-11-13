@@ -235,11 +235,15 @@ export default async function PaymentsPage({
                 </div>
             </div>
             <div className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-4 shadow-sm">
-                <div className="text-xs text-gray-500">Cobrado (todos los clientes)</div>
-                <div className="text-xl font-semibold text-emerald-700">
+            <div className="text-xs text-gray-500">Cobrado (todos los clientes)</div>
+            <div
+                className={`text-xl font-semibold ${
+                totals.paid < totals.invested ? "text-red-600" : "text-emerald-700"
+                }`}>
                 {totals.paid.toFixed(2)} €
-                </div>
             </div>
+            </div>
+
             <div className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-4 shadow-sm">
                 <div className="text-xs text-gray-500">Total a pagar (contratado)</div>
                 <div className="text-xl font-semibold text-gray-900">
@@ -250,12 +254,14 @@ export default async function PaymentsPage({
 
             {/* Total pendiente (global o del cliente seleccionado) */}
             <div className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-4 shadow-sm">
-            <p className="text-sm">
-                Total pendiente {clientId ? "del cliente" : "global"}:{" "}
-                <b>{pendingTotal.toFixed(2)} €</b>
-            </p>
+                <p className="text-sm">
+                    Total pendiente {clientId ? "del cliente" : "global"}:{" "}
+                    <b className={pendingTotal > 0 ? "text-red-600" : "text-emerald-700"}>
+                    {pendingTotal.toFixed(2)} €
+                    </b>
+                </p>
             </div>
-
+            
             {/* Resumen por cliente */}
             <section className="rounded-2xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-3">Resumen por cliente</h3>
