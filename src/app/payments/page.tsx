@@ -416,15 +416,15 @@ export default async function PaymentsPage({
                                                 Primera cuota:{" "}
                                                 {loan.firstDueDate
                                                     ? new Intl.DateTimeFormat("es-ES").format(
-                                                          loan.firstDueDate
-                                                      )
+                                                            loan.firstDueDate
+                                                        )
                                                     : "-"}
                                             </div>
                                             <div className="flex gap-2">
                                                 <a
-                                                    href={`/loans/${loan.id}/edit`}
+                                                    href={`/loans/new?loanId=${loan.id}`}
                                                     className="px-3 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition"
-                                                >
+                                                    >
                                                     Editar préstamo
                                                 </a>
                                                 <form

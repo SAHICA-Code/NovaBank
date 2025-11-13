@@ -12,24 +12,19 @@ type InitialLoan = {
     clientId: string;
     amount: number;
     months: number;
-    startDate: string;        // "YYYY-MM-DD"
-    endDate?: string;         // "YYYY-MM-DD" o ""
-    markupPercent: number;    // % que ya tiene el préstamo
+    startDate: string; // "YYYY-MM-DD"
     };
 
     type Props = {
     clients: ClientOpt[];
-    mode?: Mode;              // por defecto "create"
-    initialLoan?: InitialLoan;
+    mode: Mode;                // "create" o "edit"
+    initialLoan?: InitialLoan; // solo en modo edit
     };
 
-    export default function NewLoanForm({
-    clients,
-    mode = "create",
-    initialLoan,
-    }: Props) {
-    const isEdit = mode === "edit";
+    export default function NewLoanForm({ clients, mode, initialLoan }: Props) {
+    const isEdit = mode === "edit" && !!initialLoan;
 
+    // ---------- estado ----------
     const [clientId, setClientId] = useState(
         initialLoan?.clientId ?? clients[0]?.id ?? ""
     );
@@ -45,32 +40,10 @@ type InitialLoan = {
     const [startDate, setStartDate] = useState<string>(
         initialLoan?.startDate ?? new Date().toISOString().slice(0, 10)
     );
-    const [endDate, setEndDate] = useState<string>(initialLoan?.endDate ?? "");
-
+    const [endDate, setEndDate] = useState<string>(""); // fecha final opcional (no se guarda)
     const [daysBetween, setDaysBetween] = useState<number>(0);
 
-    // markupFactor inicial: si estamos editando e inicialLoan trae % y fechas,
-    // intentamos reconstruir el factor = markupPercent / días
-    const [markupFactor, setMarkupFactor] = useState<string>(() => {
-        if (
-        initialLoan &&
-        initialLoan.startDate &&
-        initialLoan.endDate
-        ) {
-        const start = new Date(initialLoan.startDate);
-        const end = new Date(initialLoan.endDate);
-        const diffMs = end.getTime() - start.getTime();
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays > 0) {
-            const f = initialLoan.markupPercent / diffDays;
-            if (Number.isFinite(f) && f > 0) {
-            return f.toFixed(2).replace(/\.?0+$/, "");
-            }
-        }
-        }
-        return "1.5";
-    });
-
+    const [markupFactor, setMarkupFactor] = useState<string>("1.5"); // días × factor
     const [loading, setLoading] = useState(false);
 
     // ---- helpers de formato
@@ -115,12 +88,12 @@ type InitialLoan = {
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
         setDaysBetween(diffDays);
 
-        // Si el usuario NO ha tocado los meses, los calculamos como días/30
+        // Si el usuario NO ha tocado los meses, los calculamos como días/30 en decimales
         if (!monthsTouchedFlag) {
         const monthsDec = diffDays / 30;
         const str = monthsDec
-            .toFixed(2)
-            .replace(/\.?0+$/, "");
+            .toFixed(2) // 0.50
+            .replace(/\.?0+$/, ""); // -> 0.5
         setMonths(str);
         }
     }
@@ -137,12 +110,13 @@ type InitialLoan = {
         const m = Number(months);
         if (!Number.isFinite(m) || m <= 0) return;
 
-        const daysFromMonths = Math.round(m * 30);
+        const daysFromMonths = Math.round(m * 30); // aproximación
         const start = new Date(startDate);
         const end = new Date(start);
         end.setDate(start.getDate() + daysFromMonths);
 
         const newEndISO = end.toISOString().slice(0, 10);
+        // Solo actualizamos si realmente cambia para evitar bucles tontos
         if (newEndISO !== endDate) {
         setEndDate(newEndISO);
         }
@@ -180,34 +154,38 @@ type InitialLoan = {
         );
         if (p < 0) return alert("El % de recargo no puede ser negativo");
 
+        // Validar fechas si hay final
         if (endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
         if (end < start) {
-            return alert("La fecha final no puede ser anterior a la fecha de inicio.");
+            return alert(
+            "La fecha final no puede ser anterior a la fecha de inicio."
+            );
         }
         }
 
         setLoading(true);
         try {
-        const url =
-            isEdit && initialLoan
-            ? `/api/loans/${initialLoan.id}`
-            : "/api/loans";
+        const method = isEdit ? "PATCH" : "POST";
 
-        const method = isEdit && initialLoan ? "PUT" : "POST";
-
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+        const payload: any = {
             clientId,
             amount: a,
             months: m,
             markupPercent: p,
             startDate,
-            endDate: endDate || null,
-            }),
+        };
+
+        if (isEdit && initialLoan) {
+            // para que el backend sepa qué préstamo actualizar
+            payload.id = initialLoan.id;
+        }
+
+        const res = await fetch("/api/loans", {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
         });
 
         if (res.ok) {
@@ -383,5 +361,5 @@ type InitialLoan = {
             : "Crear préstamo"}
         </button>
         </form>
-  );
+    );
 }
