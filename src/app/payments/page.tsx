@@ -427,6 +427,7 @@ export default async function PaymentsPage({
                                                     >
                                                     Editar préstamo
                                                 </a>
+
                                                 <form
                                                     action={`/loans/${loan.id}/delete`}
                                                     method="post"
