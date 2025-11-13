@@ -306,7 +306,7 @@ export default function NewLoanForm({ clients }: { clients: ClientOpt[] }) {
             <span className="font-semibold">{totalToRepay.toFixed(2)} €</span>
             </div>
             <div className="text-gray-500">
-            Cuota aprox.: {approxMonthly.toFixed(2)} € — Ej: 10 € con 50% ⇒ 15 €
+            Cuota aprox.: {approxMonthly.toFixed(2)} €
             </div>
         </div>
 
