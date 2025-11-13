@@ -85,7 +85,7 @@ export default async function PaymentsPage({
                 Cuotas
                 </h1>
                 <p className="text-gray-500 mt-1">
-                Revisa tus cuotas, filtra por cliente y marca las pagadas.
+                Revisa tus cuotas, filtra por cliente y marca las pagadas.p
                 </p>
             </div>
 
