@@ -17,7 +17,7 @@ type Payment = {
     };
 };
 
-type SortField = "dueDate" | "invested" | null;
+type SortField = "client" | "dueDate" | "invested" | null;
 type SortDir = "asc" | "desc";
 
 export default function PaymentsList({ initial }: { initial: Payment[] }) {
@@ -42,7 +42,6 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
     function handleSort(field: SortField) {
         if (!field) return;
         if (sortBy === field) {
-            // si vuelve a pulsar en el mismo campo, cambiamos el sentido
             setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
         } else {
             setSortBy(field);
@@ -55,16 +54,26 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
         if (!sortBy) return data;
 
         return data.sort((a, b) => {
+            if (sortBy === "client") {
+                const na = a.loan.client.name.toLocaleLowerCase("es");
+                const nb = b.loan.client.name.toLocaleLowerCase("es");
+                if (na < nb) return sortDir === "asc" ? -1 : 1;
+                if (na > nb) return sortDir === "asc" ? 1 : -1;
+                return 0;
+            }
+
             if (sortBy === "dueDate") {
                 const da = new Date(a.dueDate).getTime();
                 const db = new Date(b.dueDate).getTime();
                 return sortDir === "asc" ? da - db : db - da;
             }
+
             if (sortBy === "invested") {
                 const ia = a.loan.amount;
                 const ib = b.loan.amount;
                 return sortDir === "asc" ? ia - ib : ib - ia;
             }
+
             return 0;
         });
     }, [payments, sortBy, sortDir]);
@@ -83,7 +92,16 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
             <table className="w-full text-sm min-w-[700px]">
                 <thead>
                     <tr className="text-gray-600 border-b">
-                        <th className="text-left py-2">Cliente</th>
+                        <th className="text-left py-2">
+                            <button
+                                type="button"
+                                onClick={() => handleSort("client")}
+                                className="inline-flex items-center text-xs font-medium text-gray-700 hover:text-indigo-700"
+                            >
+                                Cliente
+                                {sortIndicator("client")}
+                            </button>
+                        </th>
 
                         <th className="text-left py-2">
                             <button
