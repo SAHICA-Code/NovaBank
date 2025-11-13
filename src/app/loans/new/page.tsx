@@ -1,3 +1,4 @@
+// src/app/loans/new/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -27,10 +28,18 @@ export default async function NewLoanPage() {
         <header className="mx-auto max-w-6xl px-6 pt-8">
             <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl md:text-3xl font-semibold">Nuevo préstamo</h1>
+                <h1 className="text-2xl md:text-3xl font-semibold">
+                Nuevo préstamo
+                </h1>
                 <p className="text-gray-500 mt-1">
-                Define el importe, los meses, el <b>% de recargo simple</b> (no TAE) y la fecha de inicio.
-                El total a devolver será <code>importe × (1 + %/100)</code>.
+                Define el importe, la{" "}
+                <b>fecha de inicio y la fecha final</b> o, si prefieres,{" "}
+                <b>indica directamente los meses</b>. El sistema calculará
+                automáticamente los <b>días totales</b> entre ambas fechas y
+                sugerirá un <b>% de recargo simple</b> basado en esos días
+                (por ejemplo, <code>días × 1,5</code>, configurable según la
+                persona o la urgencia). El total a devolver será{" "}
+                <code>importe × (1 + %/100)</code>.
                 </p>
             </div>
             <a
