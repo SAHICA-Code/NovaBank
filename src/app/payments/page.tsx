@@ -7,6 +7,7 @@ import PaymentsList from "./ui/PaymentsList";
 import ImportXlsx from "./ui/ImportXlsx";
 import ExportXlsxButton from "./ui/ExportXlsxButton";
 
+
 export const dynamic = "force-dynamic";
 
 // Next.js 15: searchParams es asíncrono en Server Components
@@ -428,15 +429,7 @@ export default async function PaymentsPage({
                                                     Editar préstamo
                                                 </a>
 
-                                                <form
-                                                    action={`/loans/${loan.id}/delete`}
-                                                    method="post"
-                                                    onSubmit={(e) => {
-                                                        if (!confirm("¿Seguro que quieres borrar este préstamo? Se eliminarán también sus cuotas.")) {
-                                                        e.preventDefault();
-                                                        }
-                                                    }}
-                                                    >
+                                                <form action={`/loans/${loan.id}/delete`} method="post">
                                                     <button
                                                         type="submit"
                                                         className="px-3 py-1.5 rounded-xl text-xs font-medium border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition"
