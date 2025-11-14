@@ -79,9 +79,7 @@ model VerificationToken {
 
 //
 // ============================
-/**
- * ====== PANEL EMPRESA ======
- */
+// ====== PANEL EMPRESA ======
 // ============================
 //
 
@@ -139,10 +137,14 @@ model Payment {
   status  PaymentStatus @default(PENDING)
   paidAt  DateTime?
 
+  /// NUEVO: cuánto ha pagado el cliente en esta cuota
+  paidAmount Float @default(0)
+
+  /// NUEVO: cuánto queda pendiente (para arrastrar a la siguiente cuota)
+  remaining Float @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // @@unique([loanId, dueDate]) // opcional
 
   @@index([loanId])
   @@index([status])
@@ -176,11 +178,9 @@ model ClientProfile {
 model ClientLoan {
   id String @id @default(cuid())
 
-  // Relación con el usuario (para filtrar por usuario)
   userId String
   user   User   @relation("UserClientLoans", fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relación con el perfil de cliente
   profileId String
   profile   ClientProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
