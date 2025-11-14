@@ -131,6 +131,7 @@ model Payment {
   @@index([dueDate])
 }
 
+
 enum PaymentStatus {
   PENDING
   PAID
