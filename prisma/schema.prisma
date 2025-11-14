@@ -133,13 +133,15 @@ model Payment {
   loan   Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   dueDate DateTime
-
-  amount     Decimal @db.Decimal(12, 2)   // importe original de la cuota
-  paidAmount Decimal @db.Decimal(12, 2) @default(0)  // lo pagado hasta ahora
-  remaining  Decimal @db.Decimal(12, 2)            // lo que queda por pagar
-
+  amount  Decimal       @db.Decimal(12, 2)
   status  PaymentStatus @default(PENDING)
   paidAt  DateTime?
+
+  /// NUEVO: cuánto ha pagado el cliente en esta cuota
+  paidAmount Float @default(0)
+
+  /// NUEVO: cuánto queda pendiente (para arrastrar a la siguiente cuota)
+  remaining Float @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -148,7 +150,6 @@ model Payment {
   @@index([status])
   @@index([dueDate])
 }
-
 
 enum PaymentStatus {
   PENDING
