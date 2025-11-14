@@ -118,6 +118,7 @@ model Loan {
   totalToRepay  Decimal @db.Decimal(12, 2)
 
   startDate DateTime
+  endDate   DateTime?
   payments  Payment[]
 
   createdAt DateTime @default(now())
