@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                 markupPercent: mPercent,
                 totalToRepay: String(schedule.total.toFixed(2)),
                 startDate: sDate,
-                //endDate: eDate,  
+                endDate: eDate,  
             },
         });
 
