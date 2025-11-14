@@ -7,7 +7,7 @@ export async function POST(
     req: Request,
     context: { params: Promise<{ loanId: string }> }
 ) {
-    // params ES UNA PROMISE → hay que hacer await
+    // params es Promise → se hace await
     const { loanId } = await context.params;
 
     // Auth
@@ -25,17 +25,27 @@ export async function POST(
         return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
-    // Eliminar préstamo y pagos
-    await prisma.$transaction(async (tx) => {
-        await tx.payment.deleteMany({ where: { loanId } });
-
-        await tx.loan.delete({
-            where: {
-                id: loanId,
-                ownerId: user.id,
-            },
-        });
+    // Verificar que el préstamo pertenece al usuario
+    const loan = await prisma.loan.findFirst({
+        where: {
+            id: loanId,
+            ownerId: user.id,
+        },
     });
 
+    if (!loan) {
+        return NextResponse.json(
+            { error: "Loan not found or unauthorized" },
+            { status: 404 }
+        );
+    }
+
+    // Borrar pagos y préstamo
+    await prisma.$transaction(async (tx) => {
+        await tx.payment.deleteMany({ where: { loanId } });
+        await tx.loan.delete({ where: { id: loanId } });
+    });
+
+    // Redirigir a /payments correctamente
     return NextResponse.redirect("/payments");
 }
