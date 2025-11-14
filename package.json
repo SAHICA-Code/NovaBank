@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
-  },
+  "dev": "next dev --turbopack",
+  "build": "prisma generate && next build --turbopack",
+  "postinstall": "prisma generate",
+  "start": "next start",
+  "lint": "eslint"
+},
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",
     "@prisma/client": "^6.17.1",
