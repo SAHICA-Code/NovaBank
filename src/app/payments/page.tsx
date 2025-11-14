@@ -371,8 +371,8 @@ export default async function PaymentsPage({
                                                 <div className="text-sm font-medium text-gray-900">
                                                     {loan.lastDueDate
                                                         ? new Intl.DateTimeFormat("es-ES").format(
-                                                              loan.lastDueDate
-                                                          )
+                                                                loan.lastDueDate
+                                                            )
                                                         : "-"}
                                                 </div>
                                             </div>
@@ -432,12 +432,22 @@ export default async function PaymentsPage({
                                                     action={`/loans/${loan.id}/delete`}
                                                     method="post"
                                                 >
-                                                    <button
-                                                        type="submit"
-                                                        className="px-3 py-1.5 rounded-xl text-xs font-medium border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition"
+                                                    <form
+                                                        action={`/loans/${loan.id}/delete`}
+                                                        method="post"
+                                                        onSubmit={(e) => {
+                                                            if (!confirm("¿Seguro que quieres borrar este préstamo?")) {
+                                                                e.preventDefault();
+                                                            }
+                                                        }}
                                                     >
-                                                        Borrar
-                                                    </button>
+                                                        <button
+                                                            type="submit"
+                                                            className="px-3 py-1.5 rounded-xl text-xs font-medium border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition"
+                                                        >
+                                                            Borrar
+                                                        </button>
+                                                    </form>
                                                 </form>
                                             </div>
                                         </div>
