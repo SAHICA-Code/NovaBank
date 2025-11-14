@@ -8,7 +8,7 @@ export async function POST(
     req: Request,
     context: { params: Promise<{ paymentId: string }> }
 ) {
-    // params es Promise → await obligatorio en Next.js 15
+    // params es Promise → await obligatorio (Next.js 15)
     const { paymentId } = await context.params;
 
     const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function POST(
     });
 
     if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json({ error: "No user" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -32,7 +32,7 @@ export async function POST(
         return NextResponse.json({ error: "Cantidad inválida" }, { status: 400 });
     }
 
-    // Obtener cuota actual
+    // 1. Obtener cuota
     const payment = await prisma.payment.findFirst({
         where: {
             id: paymentId,
@@ -47,17 +47,60 @@ export async function POST(
         return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
-    // === MODO TEMPORAL SIN MIGRATION ===
-    // Como aún no existen 'remaining' ni 'paidAmount',
-    // pagamos la cuota completa tal como funcionaba antes.
+    // remaining = lo que queda por pagar
+    const remaining = Number(payment.remaining ?? payment.amount);
 
-    const updated = await prisma.payment.update({
+    let leftover = paidNow - remaining; // si sobra → pasa al siguiente mes
+
+    // 2. Actualizar cuota actual
+    const newRemaining = Math.max(remaining - paidNow, 0);
+
+    const updatedCurrent = await prisma.payment.update({
         where: { id: payment.id },
         data: {
-            status: "PAID",
-            paidAt: new Date(),
+            paidAmount: (payment.paidAmount ?? 0) + paidNow,
+            remaining: newRemaining,
+            status: newRemaining <= 0 ? "PAID" : "PENDING",
+            paidAt: newRemaining <= 0 ? new Date() : payment.paidAt,
         },
     });
 
-    return NextResponse.json(updated, { status: 200 });
+    // 3. Si no sobra dinero → fin
+    if (leftover <= 0) {
+        return NextResponse.json(updatedCurrent, { status: 200 });
+    }
+
+    // 4. Arrastrar sobrante a próximas cuotas
+    const futurePayments = await prisma.payment.findMany({
+        where: {
+            loanId: payment.loanId,
+            dueDate: { gt: payment.dueDate },
+        },
+        orderBy: { dueDate: "asc" },
+    });
+
+    let lastUpdated = updatedCurrent;
+
+    for (const fp of futurePayments) {
+        if (leftover <= 0) break;
+
+        const fpRemaining = Number(fp.remaining ?? fp.amount);
+
+        const fpNewRemaining = Math.max(fpRemaining - leftover, 0);
+        const used = fpRemaining - fpNewRemaining;
+
+        leftover = leftover - used;
+
+        lastUpdated = await prisma.payment.update({
+            where: { id: fp.id },
+            data: {
+                paidAmount: (fp.paidAmount ?? 0) + used,
+                remaining: fpNewRemaining,
+                status: fpNewRemaining <= 0 ? "PAID" : "PENDING",
+                paidAt: fpNewRemaining <= 0 ? new Date() : fp.paidAt,
+            },
+        });
+    }
+
+    return NextResponse.json(lastUpdated, { status: 200 });
 }
