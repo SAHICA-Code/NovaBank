@@ -1,4 +1,3 @@
-// src/app/payments/ui/PaymentsList.tsx
 "use client";
 
 import { useState, useMemo } from "react";
@@ -12,8 +11,8 @@ type Payment = {
     status: "PENDING" | "PAID" | "LATE";
     loan: {
         client: { name: string };
-        amount: number; // inversión total del préstamo
-        markupPercent: number; // % recargo simple
+        amount: number;
+        markupPercent: number;
     };
 };
 
@@ -55,37 +54,28 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
 
         return data.sort((a, b) => {
             if (sortBy === "client") {
-                const na = a.loan.client.name.toLocaleLowerCase("es");
-                const nb = b.loan.client.name.toLocaleLowerCase("es");
-                if (na < nb) return sortDir === "asc" ? -1 : 1;
-                if (na > nb) return sortDir === "asc" ? 1 : -1;
-                return 0;
+                const na = a.loan.client.name.toLowerCase();
+                const nb = b.loan.client.name.toLowerCase();
+                return sortDir === "asc" ? na.localeCompare(nb) : nb.localeCompare(na);
             }
-
             if (sortBy === "dueDate") {
                 const da = new Date(a.dueDate).getTime();
                 const db = new Date(b.dueDate).getTime();
                 return sortDir === "asc" ? da - db : db - da;
             }
-
             if (sortBy === "invested") {
-                const ia = a.loan.amount;
-                const ib = b.loan.amount;
-                return sortDir === "asc" ? ia - ib : ib - ia;
+                return sortDir === "asc"
+                    ? a.loan.amount - b.loan.amount
+                    : b.loan.amount - a.loan.amount;
             }
-
             return 0;
         });
     }, [payments, sortBy, sortDir]);
 
-    const sortIndicator = (field: SortField) => {
-        if (sortBy !== field) return null;
-        return (
-            <span className="ml-1 text-[10px] align-middle">
-                {sortDir === "asc" ? "▲" : "▼"}
-            </span>
-        );
-    };
+    const sortIndicator = (field: SortField) =>
+        sortBy === field ? (
+            <span className="ml-1 text-[10px]">{sortDir === "asc" ? "▲" : "▼"}</span>
+        ) : null;
 
     return (
         <div className="rounded-2xl border border-black/5 bg-white/70 backdrop-blur shadow-sm p-4 overflow-x-auto">
@@ -96,67 +86,53 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
                             <button
                                 type="button"
                                 onClick={() => handleSort("client")}
-                                className="inline-flex items-center text-xs font-medium text-gray-700 hover:text-indigo-700"
+                                className="inline-flex items-center text-xs font-medium"
                             >
-                                Cliente
-                                {sortIndicator("client")}
+                                Cliente {sortIndicator("client")}
                             </button>
                         </th>
-
                         <th className="text-left py-2">
                             <button
                                 type="button"
                                 onClick={() => handleSort("dueDate")}
-                                className="inline-flex items-center text-xs font-medium text-gray-700 hover:text-indigo-700"
+                                className="inline-flex items-center text-xs font-medium"
                             >
-                                Vencimiento
-                                {sortIndicator("dueDate")}
+                                Vencimiento {sortIndicator("dueDate")}
                             </button>
                         </th>
-
                         <th className="text-left py-2">
                             <button
                                 type="button"
                                 onClick={() => handleSort("invested")}
-                                className="inline-flex items-center text-xs font-medium text-gray-700 hover:text-indigo-700"
+                                className="inline-flex items-center text-xs font-medium"
                             >
-                                Invertido
-                                {sortIndicator("invested")}
+                                Invertido {sortIndicator("invested")}
                             </button>
                         </th>
-
                         <th className="text-left py-2">% Recargo</th>
                         <th className="text-left py-2">Importe</th>
                         <th className="text-left py-2">Estado</th>
                         <th></th>
                     </tr>
                 </thead>
+
                 <tbody>
                     {sortedPayments.map((p) => (
-                        <tr
-                            key={p.id}
-                            className="border-b last:border-0 hover:bg-indigo-50/40 transition"
-                        >
-                            <td className="py-2">{p.loan.client.name}</td>
-                            <td className="py-2">
-                                {format(new Date(p.dueDate), "d 'de' MMMM yyyy", {
-                                    locale: es,
-                                })}
+                        <tr key={p.id} className="border-b hover:bg-indigo-50/40">
+                            <td>{p.loan.client.name}</td>
+                            <td>
+                                {format(new Date(p.dueDate), "d 'de' MMMM yyyy", { locale: es })}
                             </td>
-                            <td className="py-2">{p.loan.amount.toFixed(2)} €</td>
-                            <td className="py-2">{p.loan.markupPercent}%</td>
-                            <td className="py-2">{p.amount.toFixed(2)} €</td>
-                            <td className="py-2">
+                            <td>{p.loan.amount.toFixed(2)} €</td>
+                            <td>{p.loan.markupPercent}%</td>
+                            <td>{p.amount.toFixed(2)} €</td>
+                            <td>
                                 {p.status === "PAID" ? (
-                                    <span className="rounded-xl bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-medium">
+                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-xl">
                                         Pagada
                                     </span>
-                                ) : p.status === "LATE" ? (
-                                    <span className="rounded-xl bg-rose-200 text-rose-800 px-3 py-1 text-xs font-medium">
-                                        Vencida
-                                    </span>
                                 ) : (
-                                    <span className="rounded-xl bg-rose-100 text-rose-700 px-3 py-1 text-xs font-medium">
+                                    <span className="px-3 py-1 bg-rose-100 text-rose-700 text-xs rounded-xl">
                                         Pendiente
                                     </span>
                                 )}
@@ -165,7 +141,7 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
                                 {p.status !== "PAID" && (
                                     <button
                                         onClick={() => markPaid(p.id)}
-                                        className="rounded-lg bg-indigo-500 text-white px-3 py-1 text-xs font-medium hover:brightness-110 transition"
+                                        className="px-3 py-1 bg-indigo-500 text-white text-xs rounded-lg"
                                     >
                                         Marcar pagada
                                     </button>
@@ -173,14 +149,6 @@ export default function PaymentsList({ initial }: { initial: Payment[] }) {
                             </td>
                         </tr>
                     ))}
-
-                    {payments.length === 0 && (
-                        <tr>
-                            <td colSpan={7} className="py-6 text-gray-500 text-center">
-                                No hay cuotas registradas aún.
-                            </td>
-                        </tr>
-                    )}
                 </tbody>
             </table>
         </div>
