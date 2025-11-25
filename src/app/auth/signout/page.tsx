@@ -62,7 +62,7 @@ export default function SignOutPage() {
             </div>
 
             <p className="mt-5 text-[11px] text-gray-400">
-            © {new Date().getFullYear()} Nova Bank - Web creada por Sara Hidalgo Caro
+            &copy; 2025 SAHICA | Web hecha por Sara de <b> <a href="https://sahica.com" >SAHICA </a> </b> | admin@sahica.com
             </p>
         </div>
         </div>
